@@ -73,7 +73,7 @@ def probe(device_id: str, host: str | None, local_key: str, protocol: str) -> tu
     raise ProbeError(reason)
 
 
-class LitterboxClient:
+class UahpetClient:
     """Persistent connection. Pushes DP updates through callbacks (called from the worker thread)."""
 
     def __init__(
@@ -93,7 +93,7 @@ class LitterboxClient:
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
-        self._thread = threading.Thread(target=self._run, name=f"uahpet_litterbox_{self._args[0]}", daemon=True)
+        self._thread = threading.Thread(target=self._run, name=f"uahpet_{self._args[0]}", daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
@@ -113,14 +113,14 @@ class LitterboxClient:
             try:
                 was_connected = self._session()
             except Exception:  # noqa: BLE001 - keep the thread alive whatever tinytuya raises
-                _LOGGER.exception("Unexpected error in litter box connection")
+                _LOGGER.exception("Unexpected error in UAHPET device connection")
             if self._stop.is_set():
                 break
             if was_connected:
-                _LOGGER.info("Connection to litter box %s lost, reconnecting", self._args[1])
+                _LOGGER.info("Connection to UAHPET device %s lost, reconnecting", self._args[1])
                 warned = False
             elif not warned:
-                _LOGGER.warning("Litter box %s unreachable, retrying every %ss", self._args[1], RECONNECT_DELAY)
+                _LOGGER.warning("UAHPET device %s unreachable, retrying every %ss", self._args[1], RECONNECT_DELAY)
                 warned = True
             self._stop.wait(RECONNECT_DELAY)
 
@@ -129,7 +129,7 @@ class LitterboxClient:
         if not data:
             return True
         if "Err" in data:
-            _LOGGER.debug("Litter box error: %s", data)
+            _LOGGER.debug("Device error: %s", data)
             return False
         if isinstance(data.get("dps"), dict):
             self._on_dps(dict(data["dps"]))

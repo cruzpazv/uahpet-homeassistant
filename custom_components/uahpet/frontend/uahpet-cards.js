@@ -1,16 +1,17 @@
-/* UAHPET dashboard cards: litter box (this integration) and air purifier (Tuya integration).
+/* UAHPET dashboard cards: litter box (this integration) and air purifier (Tuya integration or this one).
    No build step, no dependencies. */
-const DOMAIN = "uahpet_litterbox";
+const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
+const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
 const VERSION = "0.1.0";
-const DOCS = "https://github.com/cruzpazv/uahpet-litterbox";
+const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 
 const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", confirm: "Tap again",
     auto_clean: "Auto clean", sleep_mode: "Sleep", child_lock: "Child lock", ionizer: "Ionizer", radar: "Radar",
     last_cat_weight: "Last cat", visits_today: "Visits today", last_visit_duration: "Last visit", cat_weight: "Live weight",
-    offline: "Offline", not_found: "No UAHPET litter box found. Add the UAHPET Litterbox integration first.",
+    offline: "Offline", not_found: "No UAHPET litter box found. Add the UAHPET integration first.",
     settings: "Litter box settings", weight_history: "Cat weight per visit", visits_history: "Visits per day",
     excessive_clean_times: "Too many visits", no_weight: "No weight detected", stagnant: "Stagnant",
     not_in_place: "Not in place", e_weight: "Weighing error", bin_cover_open: "Bin cover open",
@@ -18,7 +19,7 @@ const I18N = {
     on: "On", off: "Off", power: "Power", air_quality: "Air quality", filter: "Filter", filter_reset: "Reset filter",
     mode: "Mode", speed: "Speed", timer: "Timer",
     aq_great: "Great", aq_good: "Good", aq_medium: "Medium", aq_mild: "Mild", aq_severe: "Poor",
-    mode_manual: "Manual", mode_auto: "Auto", mode_sleep: "Sleep", mode_tipping: "Tipping",
+    mode_manual: "Manual", mode_auto: "Auto", mode_sleep: "Sleep", tilted: "Tipped over: stand it upright",
     speed_sleep: "Sleep", timer_cancel: "Off",
     purifier_not_found: "No Tuya air purifier found. Set it up in the Tuya integration first.",
     ed_device_id: "Device", ed_title: "Title", ed_show_actions: "Show actions",
@@ -34,7 +35,7 @@ const I18N = {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", confirm: "Pulsa otra vez",
     auto_clean: "Auto limpieza", sleep_mode: "Noche", child_lock: "Bloqueo", ionizer: "Ionizador", radar: "Radar",
     last_cat_weight: "Último gato", visits_today: "Visitas hoy", last_visit_duration: "Última visita", cat_weight: "Peso actual",
-    offline: "Sin conexión", not_found: "No hay ningún arenero UAHPET. Añade antes la integración UAHPET Litterbox.",
+    offline: "Sin conexión", not_found: "No hay ningún arenero UAHPET. Añade antes la integración UAHPET.",
     settings: "Ajustes del arenero", weight_history: "Peso del gato por visita", visits_history: "Visitas por día",
     excessive_clean_times: "Demasiadas visitas", no_weight: "Sin peso detectado", stagnant: "Estancamiento",
     not_in_place: "Fuera de posición", e_weight: "Error de pesaje", bin_cover_open: "Tapa del cubo abierta",
@@ -42,7 +43,7 @@ const I18N = {
     on: "Encendido", off: "Apagado", power: "Encender", air_quality: "Calidad del aire", filter: "Filtro",
     filter_reset: "Reiniciar filtro", mode: "Modo", speed: "Velocidad", timer: "Temporizador",
     aq_great: "Excelente", aq_good: "Buena", aq_medium: "Regular", aq_mild: "Leve", aq_severe: "Mala",
-    mode_manual: "Manual", mode_auto: "Auto", mode_sleep: "Noche", mode_tipping: "Tipping",
+    mode_manual: "Manual", mode_auto: "Auto", mode_sleep: "Noche", tilted: "Volcado: ponlo de pie",
     speed_sleep: "Noche", timer_cancel: "No",
     purifier_not_found: "No hay ningún purificador Tuya. Añádelo antes a la integración de Tuya.",
     ed_device_id: "Dispositivo", ed_title: "Título", ed_show_actions: "Mostrar acciones",
@@ -64,10 +65,12 @@ const isOff = (s) => !s || s.state === "unavailable";
 
 /* ---------- entity lookup ---------- */
 
-/** Device ids that have UAHPET Litterbox entities. */
+/** UAHPET litter boxes: devices of this integration with a work_status sensor. */
 function litterDevices(hass) {
   const ids = new Set();
-  for (const e of Object.values(hass?.entities || {})) if (e.platform === DOMAIN && e.device_id) ids.add(e.device_id);
+  for (const e of Object.values(hass?.entities || {})) {
+    if (e.platform === DOMAIN && e.device_id && e.translation_key === "work_status") ids.add(e.device_id);
+  }
   return [...ids];
 }
 
@@ -82,17 +85,17 @@ function entityMap(hass, deviceId) {
   return { dev, map };
 }
 
-function tuyaEntitiesByDevice(hass) {
+function purifierEntitiesByDevice(hass) {
   const devs = {};
   for (const e of Object.values(hass?.entities || {})) {
-    if (TUYA_PLATFORMS.includes(e.platform) && e.device_id) (devs[e.device_id] ||= []).push(e);
+    if (PURIFIER_PLATFORMS.includes(e.platform) && e.device_id) (devs[e.device_id] ||= []).push(e);
   }
   return devs;
 }
 
-/** Tuya devices with a fan plus an air quality or filter sensor = air purifiers. */
+/** Devices with a fan plus an air quality or filter sensor = air purifiers. */
 function purifierDevices(hass) {
-  return Object.entries(tuyaEntitiesByDevice(hass))
+  return Object.entries(purifierEntitiesByDevice(hass))
     .filter(([, es]) => es.some((e) => e.entity_id.startsWith("fan.")) &&
       es.some((e) => ["air_quality", "filter_utilization"].includes(e.translation_key)))
     .map(([dev]) => dev);
@@ -102,7 +105,7 @@ function purifierDevices(hass) {
 function purifierMap(hass, deviceId) {
   const dev = deviceId || purifierDevices(hass)[0];
   const map = {};
-  for (const e of (dev && tuyaEntitiesByDevice(hass)[dev]) || []) {
+  for (const e of (dev && purifierEntitiesByDevice(hass)[dev]) || []) {
     if (e.entity_id.startsWith("fan.")) map.fan = e.entity_id;
     else if (e.translation_key) map[e.translation_key] = e.entity_id;
   }
@@ -133,7 +136,7 @@ class UahpetEditor extends HTMLElement {
 }
 const bool = (name) => ({ name, selector: { boolean: {} } });
 const DEVICE_FIELD = { name: "device_id", selector: { device: { filter: { integration: DOMAIN } } } };
-const TUYA_DEVICE_FIELD = { name: "device_id", selector: { device: { filter: TUYA_PLATFORMS.map((integration) => ({ integration })) } } };
+const PURIFIER_DEVICE_FIELD = { name: "device_id", selector: { device: { filter: PURIFIER_PLATFORMS.map((integration) => ({ integration })) } } };
 const TITLE_FIELD = { name: "title", selector: { text: {} } };
 
 class StatusEditor extends UahpetEditor {
@@ -146,7 +149,7 @@ class HistoryEditor extends UahpetEditor {
   static schema = [DEVICE_FIELD, { name: "days", selector: { number: { min: 1, max: 365, mode: "box" } } }];
 }
 class PurifierEditor extends UahpetEditor {
-  static schema = [TUYA_DEVICE_FIELD, TITLE_FIELD, bool("show_modes"), bool("show_speed"), bool("show_timer"), bool("show_extras")];
+  static schema = [PURIFIER_DEVICE_FIELD, TITLE_FIELD, bool("show_modes"), bool("show_speed"), bool("show_timer"), bool("show_extras")];
 }
 
 /* ---------- base for the hand-drawn cards ---------- */
@@ -315,7 +318,9 @@ class UahpetLitterboxCard extends UahpetCard {
 /* ---------- air purifier card (entities from the Tuya integration) ---------- */
 
 const AQ_TONE = { great: "ok", good: "ok", medium: "warn", mild: "warn", severe: "bad" };
-const MODE_ICONS = { manual: "mdi:hand-back-right-outline", auto: "mdi:fan-auto", sleep: "mdi:power-sleep", tipping: "mdi:fan-plus" };
+const MODE_ICONS = { manual: "mdi:hand-back-right-outline", auto: "mdi:fan-auto", sleep: "mdi:power-sleep" };
+// "tipping" is reported as a mode when the purifier tilts over 45°: an alert, not a choice.
+const TILT_MODE = "tipping";
 
 class UahpetPurifierCard extends UahpetCard {
   static defaults = { show_modes: true, show_speed: true, show_timer: true, show_extras: true };
@@ -354,10 +359,12 @@ class UahpetPurifierCard extends UahpetCard {
     const title = c.title || this._deviceName(this._dev) || t(this._hass, "card_purifier");
     const pct = Number(fan?.attributes.percentage) || 0;
     const mode = fan?.attributes.preset_mode;
+    const tilted = mode === TILT_MODE;
+    const modes = (fan?.attributes.preset_modes || []).filter((m) => m !== TILT_MODE);
     const speeds = fan ? this._speeds(fan) : [];
     const speedIdx = speeds.length && pct ? Math.max(0, Math.ceil((pct * speeds.length) / 100) - 1) : -1;
     const sub = offline ? t(this._hass, "offline")
-      : on ? [t(this._hass, "on"), mode && t(this._hass, `mode_${mode}`), speeds[speedIdx]?.label].filter(Boolean).join(" · ")
+      : on ? [t(this._hass, "on"), mode && !tilted && t(this._hass, `mode_${mode}`), speeds[speedIdx]?.label].filter(Boolean).join(" · ")
       : t(this._hass, "off");
 
     const aq = this._state("air_quality");
@@ -385,6 +392,7 @@ class UahpetPurifierCard extends UahpetCard {
         <button class="power ${on ? "on" : ""}" data-act="power" aria-label="${esc(t(this._hass, "power"))}" aria-pressed="${on}" ${dis}>
           <ha-icon icon="mdi:power"></ha-icon></button>
       </div>
+      ${tilted ? `<div class="alerts"><button class="alert" data-act="info" data-key="fan"><ha-icon icon="mdi:alert-rotate"></ha-icon>${esc(t(this._hass, "tilted"))}</button></div>` : ""}
       <div class="stats">
         ${aq ? `<button class="stat aq ${aqTone}" data-act="info" data-key="air_quality">
           <ha-icon icon="mdi:air-filter"></ha-icon>
@@ -396,8 +404,8 @@ class UahpetPurifierCard extends UahpetCard {
           <span class="lbl">${esc(t(this._hass, "filter"))}</span>
           <span class="bar ${filterTone}"><span style="width:${filterPct}%"></span></span></button>` : ""}
       </div>
-      ${c.show_modes && fan?.attributes.preset_modes?.length ? `<div class="group"><div class="glabel">${esc(t(this._hass, "mode"))}</div>
-        ${seg("mode", fan.attributes.preset_modes.map((m) => [m, t(this._hass, `mode_${m}`), MODE_ICONS[m]]), on ? mode : null)}</div>` : ""}
+      ${c.show_modes && modes.length ? `<div class="group"><div class="glabel">${esc(t(this._hass, "mode"))}</div>
+        ${seg("mode", modes.map((m) => [m, t(this._hass, `mode_${m}`), MODE_ICONS[m]]), on ? mode : null)}</div>` : ""}
       ${c.show_speed && speeds.length ? `<div class="group"><div class="glabel">${esc(t(this._hass, "speed"))}</div>
         ${seg("speed", speeds.map((s) => [String(s.pct), s.label]), on && speedIdx >= 0 ? String(speeds[speedIdx].pct) : null)}</div>` : ""}
       ${c.show_timer && timer?.attributes.options?.length ? `<div class="group"><div class="glabel">${esc(t(this._hass, "timer"))}</div>

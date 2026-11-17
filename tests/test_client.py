@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import pytest
 
-from custom_components.uahpet_litterbox import client as client_mod
-from custom_components.uahpet_litterbox.client import LitterboxClient, ProbeError, probe
+from custom_components.uahpet import client as client_mod
+from custom_components.uahpet.client import UahpetClient, ProbeError, probe
 
 
 class FakeDevice:
@@ -65,7 +65,7 @@ def _wait(cond, timeout=3.0):
 def test_session_pushes_and_sends():
     updates, conn = [], []
     FakeDevice.script = [{"dps": {"106": 52}}, {"dps": {"7": 9}}]
-    c = LitterboxClient("id", "1.2.3.4", "key", "3.4", updates.append, conn.append)
+    c = UahpetClient("id", "1.2.3.4", "key", "3.4", updates.append, conn.append)
     c.start()
     try:
         assert _wait(lambda: len(updates) >= 3)
@@ -82,7 +82,7 @@ def test_session_reconnects_after_error():
     conn = []
     FakeDevice.script = [{"Err": "901", "Error": "Network Error"}]
     with patch.object(client_mod, "RECONNECT_DELAY", 0.05):
-        c = LitterboxClient("id", "1.2.3.4", "key", "3.4", lambda d: None, conn.append)
+        c = UahpetClient("id", "1.2.3.4", "key", "3.4", lambda d: None, conn.append)
         c.start()
         try:
             assert _wait(lambda: conn[:3] == [True, False, True])

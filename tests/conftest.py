@@ -1,4 +1,4 @@
-"""Shared fixtures: a fake LitterboxClient so no network is touched."""
+"""Shared fixtures: a fake UahpetClient so no network is touched."""
 
 from __future__ import annotations
 
@@ -45,5 +45,5 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 @pytest.fixture
 def fake_client():
     FakeClient.instances = []
-    with patch("custom_components.uahpet_litterbox.coordinator.LitterboxClient", FakeClient):
+    with patch("custom_components.uahpet.coordinator.UahpetClient", FakeClient):
         yield FakeClient

@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.uahpet_litterbox.const import CONF_DEVICE_ID, CONF_LOCAL_KEY, CONF_PROTOCOL, DOMAIN
+from custom_components.uahpet.const import CONF_DEVICE_ID, CONF_LOCAL_KEY, CONF_PROFILE, CONF_PROTOCOL, DOMAIN
 
 DEVICE_ID = "bf4f00000000000000test"
 
@@ -17,7 +17,13 @@ async def _setup(hass: HomeAssistant) -> MockConfigEntry:
         domain=DOMAIN,
         title="Arenero",
         unique_id=DEVICE_ID,
-        data={CONF_DEVICE_ID: DEVICE_ID, "host": "192.168.1.50", CONF_LOCAL_KEY: "0123456789abcdef", CONF_PROTOCOL: "3.4"},
+        data={
+            CONF_DEVICE_ID: DEVICE_ID,
+            CONF_PROFILE: "litterbox",
+            "host": "192.168.1.50",
+            CONF_LOCAL_KEY: "0123456789abcdef",
+            CONF_PROTOCOL: "3.4",
+        },
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)

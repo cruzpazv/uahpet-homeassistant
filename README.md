@@ -1,30 +1,33 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/cruzpazv/uahpet-litterbox/main/custom_components/uahpet_litterbox/brand/icon@2x.png" alt="UAHPET Litterbox" width="160">
+  <img src="https://raw.githubusercontent.com/cruzpazv/uahpet-homeassistant/main/custom_components/uahpet/brand/icon@2x.png" alt="UAHPET" width="160">
 </p>
 
-# UAHPET Litterbox
+# UAHPET for Home Assistant
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange)](https://hacs.xyz/docs/faq/custom_repositories)
-[![Validate](https://img.shields.io/github/actions/workflow/status/cruzpazv/uahpet-litterbox/validate.yml?branch=main&label=validate&logo=github)](https://github.com/cruzpazv/uahpet-litterbox/actions/workflows/validate.yml)
-[![License](https://img.shields.io/github/license/cruzpazv/uahpet-litterbox?color=yellow)](LICENSE)
+[![Validate](https://img.shields.io/github/actions/workflow/status/cruzpazv/uahpet-homeassistant/validate.yml?branch=main&label=validate&logo=github)](https://github.com/cruzpazv/uahpet-homeassistant/actions/workflows/validate.yml)
+[![License](https://img.shields.io/github/license/cruzpazv/uahpet-homeassistant?color=yellow)](LICENSE)
 
-Home Assistant integration for the **UAHPET stainless steel smart litter box** (Tuya product `y0kvbmrnprybewtd`, category `msp`). It talks to the litter box **locally** and exposes every data point, including the 19 that the official Tuya integration does not show: levelling, emptying, child lock, sleep mode, ionizer, radar, waste bin status, the cat's weight per visit and more.
+Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, but the official Tuya integration only shows their standard data points. This package talks to them **locally** and exposes everything the UAHPET app can do, plus dashboard cards.
 
-Comes with three litter box dashboard cards, plus a card for the **UAHPET air purifier** ("Pet Air Purifier Slim") that uses the entities of the official Tuya integration.
+## Supported devices
 
-- Local push: no cloud, updates within a second
-- Every DP of the device, with English and Spanish names
-- Dashboard cards with visual editors: status, settings and history
-- Reconfigure flow for when the local key or the IP address changes
-- Diagnostics with the local key redacted
+| Device | Tuya category / product | How | What you get |
+|---|---|---|---|
+| Self-cleaning litter box | `msp` / `y0kvbmrnprybewtd` | **This integration** (local) | Every DP: clean, level, empty, sleep mode, child lock, ionizer, radar, waste bin, alerts, cat weight per visit… The Tuya integration only shows 5 of 27 |
+| Air Purifier Slim | `kj` / `dhhzjzdaiyshx2md` | Official Tuya integration + the card from this package | All 8 DPs are already in the Tuya integration |
+| Air Purifier (large, with hair suction) | `kj`? | Not yet | Needs a DP dump, see [Adding a device](#adding-a-device) |
+| Fresh Food Feeder | ? (app code `wsq`) | Not yet | Needs a DP dump |
+
+Other UAHPET products (fountains, Nano Deodorizer, iRetriever, Pulse tracker) are not connected to the UAHPET app over Wi-Fi.
 
 ## Install
 
 **HACS (custom repository)**
-HACS → ⋮ → Custom repositories → `https://github.com/cruzpazv/uahpet-litterbox` → type *Integration* → Download → restart Home Assistant.
+HACS → ⋮ → Custom repositories → `https://github.com/cruzpazv/uahpet-homeassistant` → type *Integration* → Download → restart Home Assistant.
 
 **Manual**
-Copy `custom_components/uahpet_litterbox` into `config/custom_components/` and restart.
+Copy `custom_components/uahpet` into `config/custom_components/` and restart.
 
 ## Get the device ID and local key
 
@@ -33,15 +36,15 @@ Local Tuya control needs the device's **local key**. Either:
 - `tools/tuya_schema.py` in this repo (Tuya IoT Platform credentials). `--region eu` lists your devices, `--device <id>` writes `tuya_dump_<id>/info.json` with `local_key`.
 - or `python -m tinytuya wizard`.
 
-The local key changes every time the litter box is paired again. Use **Reconfigure** on the integration when that happens.
+The local key changes every time a device is paired again. Use **Reconfigure** on the integration when that happens.
 
 ## Setup
 
-Settings → Devices & services → Add integration → **UAHPET Litterbox**: name, device ID, local key. The IP address is optional (empty = find it on the network) and the protocol version is detected automatically. Reserve the litter box's IP in your router.
+Settings → Devices & services → Add integration → **UAHPET**: device ID and local key. The name, IP address and protocol version are optional: the device type and protocol are detected automatically, and an empty IP means "find it on the network". Reserve the device's IP in your router.
 
-**Using the official Tuya integration as well?** Both can run at the same time. To avoid duplicated entities, disable the litter box device in the Tuya integration (Devices → litter box → ⋮ → Disable).
+**Using the official Tuya integration as well?** Both can run at the same time. To avoid duplicated entities, disable the litter box in the Tuya integration (Devices → litter box → ⋮ → Disable). Keep the air purifiers in the Tuya integration.
 
-## Entities
+## Litter box entities
 
 | Entity | DP | Notes |
 |---|---:|---|
@@ -73,7 +76,7 @@ Still unknown: the meaning of the *stagnant* alert and the packed format of DP 1
 
 ## Dashboard cards
 
-The cards load automatically. Add them from the card picker (search "UAHPET") or in YAML. `device_id` is optional: without it they use the first UAHPET litter box.
+The cards load automatically with the integration. Add them from the card picker (search "UAHPET") or in YAML. `device_id` is optional: without it each card uses the first matching device.
 
 ```yaml
 type: custom:uahpet-litterbox-card       # status, alerts, actions, toggles
@@ -92,22 +95,18 @@ type: custom:uahpet-litterbox-history-card
 days: 30                                  # cat weight per visit and visits per day
 ```
 
-### Air purifier card
-
-The UAHPET air purifier (Tuya category `kj`, product `dhhzjzdaiyshx2md`) only has 8 data points, and the official [Tuya integration](https://www.home-assistant.io/integrations/tuya) already exposes all of them. This repo does not add a second integration for it, only a card built on those Tuya entities (XTend Tuya works too):
-
 ```yaml
-type: custom:uahpet-purifier-card
-device_id: <the purifier's device>        # optional: defaults to the first Tuya air purifier
-show_modes: true                          # manual / auto / sleep / tipping
+type: custom:uahpet-purifier-card         # entities from the Tuya integration (XTend Tuya works too)
+device_id: <the purifier's device>
+show_modes: true                          # manual / auto / sleep
 show_speed: true                          # sleep, 1, 2, 3
 show_timer: true                          # off, 2–10 h
 show_extras: true                         # child lock and filter reset (needs a second tap)
 ```
 
-The card shows power, air quality, remaining filter life (amber below 30 %, red below 15 %), mode, speed and timer. With several purifiers, add one card per purifier and pick its device in the editor.
+The purifier card shows power, air quality, remaining filter life (amber below 30 %, red below 15 %), mode, speed and timer. When the purifier tilts over 45° it reports the mode `tipping`: the card shows a "tipped over" alert instead of offering it as a mode. With several purifiers, add one card per purifier.
 
-The cards are served by this integration, so the UAHPET Litterbox integration must be set up for the purifier card to load.
+The cards are served by this integration, so at least one UAHPET device must be set up for them to load.
 
 Full example: [examples/dashboard.yaml](examples/dashboard.yaml).
 
@@ -115,9 +114,17 @@ Full example: [examples/dashboard.yaml](examples/dashboard.yaml).
 
 This integration only talks to the device. To name each visit after the right cat, add [Litter Cat Identifier](https://github.com/cruzpazv/litter-cat-identifier) with *Last cat weight* as the weight sensor and *Visits today* as the visit counter.
 
+## Adding a device
+
+1. Dump its data points with `tools/tuya_schema.py --region <region> --device <device id>` (needs a free Tuya IoT Platform project linked to the Smart Life app). Share `schema.md`, **never** `info.json` (it holds the local key).
+2. Compare with what the official Tuya integration already shows. If it covers everything, a card is enough (like the air purifier).
+3. Otherwise add a profile: a module in `custom_components/uahpet/profiles/` with a `Profile` (DP ids, detection `signature`, entity descriptions), append it to `PROFILES`, and add the entity names to `strings.json` and `translations/`.
+
 ## Development
 
 ```bash
 pip install pytest-homeassistant-custom-component==0.13.316 tinytuya==1.20.0
 pytest -q
 ```
+
+Icon source: [assets/icon.svg](assets/icon.svg) (`rsvg-convert -w 256 -h 256 assets/icon.svg -o custom_components/uahpet/brand/icon.png`, and `-w 512 -h 512` for `icon@2x.png`).

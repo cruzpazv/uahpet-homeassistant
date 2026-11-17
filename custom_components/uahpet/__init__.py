@@ -1,4 +1,4 @@
-"""UAHPET Litterbox: local Tuya integration exposing every DP of the UAHPET litter box."""
+"""UAHPET: local Tuya integration for UAHPET pet devices (every DP, not only the standard ones)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
-from .coordinator import LitterboxConfigEntry, LitterboxCoordinator
+from .coordinator import UahpetConfigEntry, UahpetCoordinator
 from .frontend import async_register_cards
 
 PLATFORMS = [
@@ -32,22 +32,22 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: LitterboxConfigEntry) -> bool:
-    coordinator = LitterboxCoordinator(hass, entry)
+async def async_setup_entry(hass: HomeAssistant, entry: UahpetConfigEntry) -> bool:
+    coordinator = UahpetCoordinator(hass, entry)
     coordinator.client.start()
     try:
         async with asyncio.timeout(FIRST_DATA_TIMEOUT):
             await coordinator.first_data.wait()
     except TimeoutError as err:
         await hass.async_add_executor_job(coordinator.client.stop)
-        raise ConfigEntryNotReady(f"No response from litter box at {entry.data[CONF_HOST]}") from err
+        raise ConfigEntryNotReady(f"No response from UAHPET device at {entry.data[CONF_HOST]}") from err
 
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: LitterboxConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: UahpetConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         await hass.async_add_executor_job(entry.runtime_data.client.stop)

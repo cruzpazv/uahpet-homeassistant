@@ -1,14 +1,14 @@
 {
-  "domain": "uahpet_litterbox",
-  "name": "UAHPET Litterbox",
+  "domain": "uahpet",
+  "name": "UAHPET",
   "after_dependencies": ["frontend"],
   "codeowners": ["@cruzpazv"],
   "config_flow": true,
   "dependencies": ["http"],
-  "documentation": "https://github.com/cruzpazv/uahpet-litterbox",
+  "documentation": "https://github.com/cruzpazv/uahpet-homeassistant",
   "integration_type": "device",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/cruzpazv/uahpet-litterbox/issues",
+  "issue_tracker": "https://github.com/cruzpazv/uahpet-homeassistant/issues",
   "loggers": ["tinytuya"],
   "requirements": ["tinytuya==1.20.0"],
   "version": "0.1.0"

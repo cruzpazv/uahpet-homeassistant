@@ -8,12 +8,12 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.uahpet_litterbox.client import ProbeError
-from custom_components.uahpet_litterbox.const import DOMAIN
+from custom_components.uahpet.client import ProbeError
+from custom_components.uahpet.const import DOMAIN
 
 from .conftest import SAMPLE_DPS
 
-PROBE = "custom_components.uahpet_litterbox.config_flow.probe"
+PROBE = "custom_components.uahpet.config_flow.probe"
 USER_INPUT = {
     "name": "Arenero",
     "device_id": " bf4f00000000000000test ",
@@ -36,6 +36,7 @@ async def test_user_flow(hass: HomeAssistant, fake_client) -> None:
     assert result["title"] == "Arenero"
     assert result["data"] == {
         "device_id": "bf4f00000000000000test",
+        "profile": "litterbox",
         "host": "192.168.1.50",
         "local_key": "0123456789abcdef",
         "protocol_version": "3.4",
@@ -46,6 +47,14 @@ async def test_user_flow(hass: HomeAssistant, fake_client) -> None:
     result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_default_title(hass: HomeAssistant, fake_client) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    with patch(PROBE, return_value=("192.168.1.50", "3.4", SAMPLE_DPS)):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {**USER_INPUT, "name": ""})
+        await hass.async_block_till_done()
+    assert result["title"] == "UAHPET Litter Box"
 
 
 async def test_user_flow_errors(hass: HomeAssistant, fake_client) -> None:
