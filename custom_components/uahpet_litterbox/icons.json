@@ -1,0 +1,62 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "excessive_clean_times": { "default": "mdi:counter" },
+      "no_weight": { "default": "mdi:scale-balance" },
+      "stagnant": { "default": "mdi:timer-alert-outline" },
+      "not_in_place": { "default": "mdi:alert-rhombus-outline" },
+      "e_weight": { "default": "mdi:scale-unbalanced" },
+      "bin_cover_open": { "default": "mdi:delete-outline" },
+      "bin_full": { "default": "mdi:delete-alert" },
+      "motor_fault": { "default": "mdi:engine-off-outline" }
+    },
+    "button": {
+      "clean": { "default": "mdi:broom" },
+      "level": { "default": "mdi:waves" },
+      "empty": { "default": "mdi:delete-empty" }
+    },
+    "number": {
+      "clean_delay": { "default": "mdi:timer-cog-outline" },
+      "bury_delay": { "default": "mdi:timer-sand" },
+      "excessive_visits": { "default": "mdi:counter" }
+    },
+    "select": {
+      "litter_type": { "default": "mdi:grain" },
+      "weight_unit": { "default": "mdi:weight" }
+    },
+    "sensor": {
+      "last_cat_weight": { "default": "mdi:cat" },
+      "cat_weight": { "default": "mdi:scale" },
+      "visits_today": { "default": "mdi:paw" },
+      "last_visit_duration": { "default": "mdi:timer-outline" },
+      "work_status": {
+        "default": "mdi:cat",
+        "state": {
+          "cleaning": "mdi:rotate-3d-variant",
+          "clearing": "mdi:delete-empty",
+          "leveling": "mdi:waves",
+          "e_weight": "mdi:scale-unbalanced",
+          "radar": "mdi:radar",
+          "clumping": "mdi:timer-sand"
+        }
+      },
+      "bin_status": {
+        "default": "mdi:delete-outline",
+        "state": { "bin_full": "mdi:delete-alert", "bin_uninstalled": "mdi:delete-off-outline" }
+      },
+      "active_alerts": { "default": "mdi:bell-outline" },
+      "work_log": { "default": "mdi:cog-transfer-outline" },
+      "log_code": { "default": "mdi:code-braces" }
+    },
+    "switch": {
+      "auto_clean": { "default": "mdi:robot-vacuum" },
+      "sleep_mode": { "default": "mdi:power-sleep" },
+      "child_lock": { "default": "mdi:lock-outline", "state": { "off": "mdi:lock-open-variant-outline" } },
+      "ionizer": { "default": "mdi:creation-outline" },
+      "radar": { "default": "mdi:radar" },
+      "motor_forward": { "default": "mdi:rotate-right" },
+      "motor_reverse": { "default": "mdi:rotate-left" },
+      "developer_mode": { "default": "mdi:wrench-outline" }
+    }
+  }
+}

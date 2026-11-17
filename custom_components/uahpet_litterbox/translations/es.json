@@ -1,0 +1,124 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Arenero UAHPET",
+        "description": "Conexión local. Obtén el ID del dispositivo y la clave local con `tools/tuya_schema.py` (info.json) o `python -m tinytuya wizard`.",
+        "data": {
+          "name": "Nombre",
+          "device_id": "ID del dispositivo",
+          "local_key": "Clave local",
+          "host": "Dirección IP",
+          "protocol_version": "Versión del protocolo"
+        },
+        "data_description": {
+          "host": "Déjalo vacío para buscarlo en la red (difusión UDP, tarda hasta 20 s). Conviene reservar la IP en el router.",
+          "protocol_version": "Automático prueba 3.5, 3.4 y 3.3."
+        }
+      },
+      "reconfigure": {
+        "title": "Actualizar conexión",
+        "description": "Úsalo tras volver a emparejar el arenero (cambia la clave local) o si ha cambiado su IP.",
+        "data": {
+          "local_key": "Clave local",
+          "host": "Dirección IP",
+          "protocol_version": "Versión del protocolo"
+        },
+        "data_description": {
+          "host": "Déjalo vacío para buscarlo en la red.",
+          "protocol_version": "Automático prueba 3.5, 3.4 y 3.3."
+        }
+      }
+    },
+    "error": {
+      "cannot_find": "No se encuentra el arenero en la red. Introduce su IP.",
+      "cannot_connect": "No se puede conectar con el arenero.",
+      "invalid_auth": "Clave local o versión del protocolo incorrectas.",
+      "not_supported": "Este dispositivo no parece un arenero UAHPET.",
+      "unknown": "Error inesperado, revisa el registro."
+    },
+    "abort": {
+      "already_configured": "Este arenero ya está configurado.",
+      "reconfigure_successful": "Conexión actualizada."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "excessive_clean_times": { "name": "Demasiadas visitas" },
+      "no_weight": { "name": "Sin peso detectado" },
+      "stagnant": { "name": "Estancamiento" },
+      "not_in_place": { "name": "Fuera de posición" },
+      "e_weight": { "name": "Error de pesaje" },
+      "bin_cover_open": { "name": "Tapa del cubo abierta" },
+      "bin_full": { "name": "Cubo lleno" },
+      "motor_fault": { "name": "Fallo del motor" }
+    },
+    "button": {
+      "clean": { "name": "Limpiar" },
+      "level": { "name": "Nivelar arena" },
+      "empty": { "name": "Vaciar arena" }
+    },
+    "number": {
+      "clean_delay": { "name": "Retardo de limpieza" },
+      "bury_delay": { "name": "Retardo de enterrado" },
+      "excessive_visits": { "name": "Umbral de demasiadas visitas" }
+    },
+    "select": {
+      "litter_type": {
+        "name": "Tipo de arena",
+        "state": { "larger_particle": "Grano grueso", "finer_particle": "Grano fino" }
+      },
+      "weight_unit": {
+        "name": "Unidad de peso del aparato",
+        "state": { "unit_kg": "kg", "unit_lb": "lb" }
+      }
+    },
+    "sensor": {
+      "last_cat_weight": { "name": "Peso del último gato" },
+      "cat_weight": { "name": "Peso en tiempo real" },
+      "visits_today": { "name": "Visitas hoy" },
+      "last_visit_duration": { "name": "Duración de la última visita" },
+      "work_status": {
+        "name": "Estado",
+        "state": {
+          "standby": "En reposo",
+          "cleaning": "Limpiando",
+          "clearing": "Vaciando",
+          "leveling": "Nivelando",
+          "e_weight": "Error de pesaje",
+          "radar": "Gato detectado",
+          "clumping": "Esperando a que apelmace"
+        }
+      },
+      "bin_status": {
+        "name": "Cubo de residuos",
+        "state": {
+          "bin_normal": "Correcto",
+          "bin_full": "Lleno",
+          "bin_uninstalled": "Sin cubo",
+          "bin_cover_open": "Tapa abierta"
+        }
+      },
+      "active_alerts": { "name": "Avisos activos" },
+      "work_log": {
+        "name": "Fase del ciclo",
+        "state": {
+          "clean_a": "clean_a", "clean_b": "clean_b", "clean_c": "clean_c", "clean_d": "clean_d",
+          "clean_f": "clean_f", "clean_dc": "clean_dc", "level_a": "level_a", "level_b": "level_b",
+          "level_c": "level_c", "clear_a": "clear_a", "clear_b": "clear_b"
+        }
+      },
+      "log_code": { "name": "Código del registro de trabajo" }
+    },
+    "switch": {
+      "auto_clean": { "name": "Limpieza automática" },
+      "sleep_mode": { "name": "Modo noche" },
+      "child_lock": { "name": "Bloqueo infantil" },
+      "ionizer": { "name": "Ionizador" },
+      "radar": { "name": "Radar" },
+      "motor_forward": { "name": "Motor hacia delante (manual)" },
+      "motor_reverse": { "name": "Motor hacia atrás (manual)" },
+      "developer_mode": { "name": "Modo desarrollador" }
+    }
+  }
+}

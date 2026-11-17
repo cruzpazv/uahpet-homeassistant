@@ -1,0 +1,17 @@
+# Example view. device_id is optional: without it the cards pick the first UAHPET litter box.
+title: Litter box
+path: litter-box
+type: sections
+sections:
+  - type: grid
+    cards:
+      - type: custom:uahpet-litterbox-card
+        show_alerts: true
+        show_actions: true
+        show_toggles: true
+      - type: custom:uahpet-litterbox-settings-card
+        show_advanced: false
+  - type: grid
+    cards:
+      - type: custom:uahpet-litterbox-history-card
+        days: 30

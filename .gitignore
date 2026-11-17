@@ -1,0 +1,6 @@
+# Tuya dumps contain the local key
+tuya_dump_*/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
