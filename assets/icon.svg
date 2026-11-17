@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5cc3a2"/>
+      <stop offset="1" stop-color="#2c8a6f"/>
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a6b5a"/>
+      <stop offset="1" stop-color="#1d4f42"/>
+    </linearGradient>
+    <linearGradient id="litter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1d6a0"/>
+      <stop offset="1" stop-color="#d9b06a"/>
+    </linearGradient>
+    <clipPath id="dome"><rect x="0" y="0" width="512" height="400"/></clipPath>
+    <clipPath id="hole"><circle cx="256" cy="262" r="112"/></clipPath>
+  </defs>
+
+  <!-- housing: drum dome on a base -->
+  <circle cx="256" cy="268" r="200" fill="url(#body)" clip-path="url(#dome)"/>
+  <rect x="44" y="372" width="424" height="76" rx="34" fill="url(#base)"/>
+  <circle cx="256" cy="410" r="9" fill="#a8f2d6"/>
+
+  <!-- opening with stainless rim -->
+  <circle cx="256" cy="262" r="126" fill="#eaf4f0"/>
+  <circle cx="256" cy="262" r="112" fill="#143a31"/>
+
+  <g clip-path="url(#hole)">
+    <!-- cat peeking out -->
+    <path d="M184 330 C178 290 186 250 198 214 L240 250 Q256 246 272 250 L314 214 C326 250 334 290 328 330 Z" fill="#f7f1e7"/>
+    <path d="M205 232 L222 248 L208 252 Z M307 232 L290 248 L304 252 Z" fill="#f3b8b0"/>
+    <ellipse cx="231" cy="284" rx="10" ry="13" fill="#143a31"/>
+    <ellipse cx="281" cy="284" rx="10" ry="13" fill="#143a31"/>
+    <path d="M250 302 L262 302 L256 309 Z" fill="#e58f86"/>
+    <!-- litter in front -->
+    <path d="M130 330 Q190 306 256 318 Q322 306 382 330 L382 380 L130 380 Z" fill="url(#litter)"/>
+  </g>
+</svg>
