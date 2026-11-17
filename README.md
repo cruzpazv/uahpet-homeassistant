@@ -5,8 +5,13 @@
 # UAHPET for Home Assistant
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange)](https://hacs.xyz/docs/faq/custom_repositories)
-[![Validate](https://img.shields.io/github/actions/workflow/status/cruzpazv/uahpet-homeassistant/validate.yml?branch=main&label=validate&logo=github)](https://github.com/cruzpazv/uahpet-homeassistant/actions/workflows/validate.yml)
+[![Release](https://img.shields.io/github/v/release/cruzpazv/uahpet-homeassistant?label=release)](https://github.com/cruzpazv/uahpet-homeassistant/releases)
+[![Hassfest](https://img.shields.io/github/actions/workflow/status/cruzpazv/uahpet-homeassistant/hassfest.yml?branch=main&label=Hassfest&logo=github)](https://github.com/cruzpazv/uahpet-homeassistant/actions/workflows/hassfest.yml)
+[![HACS validation](https://img.shields.io/github/actions/workflow/status/cruzpazv/uahpet-homeassistant/hacs.yml?branch=main&label=HACS%20validation&logo=github)](https://github.com/cruzpazv/uahpet-homeassistant/actions/workflows/hacs.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/cruzpazv/uahpet-homeassistant/tests.yml?branch=main&label=Tests&logo=github)](https://github.com/cruzpazv/uahpet-homeassistant/actions/workflows/tests.yml)
 [![License](https://img.shields.io/github/license/cruzpazv/uahpet-homeassistant?color=yellow)](LICENSE)
+[![Version](https://img.shields.io/badge/dynamic/json?label=VERSION&color=blue&url=https%3A%2F%2Fraw.githubusercontent.com%2Fcruzpazv%2Fuahpet-homeassistant%2Fmain%2Fcustom_components%2Fuahpet%2Fmanifest.json&query=%24.version)](custom_components/uahpet/manifest.json)
+[![Home Assistant](https://img.shields.io/badge/dynamic/json?label=HOME%20ASSISTANT&color=41BDF5&prefix=%3E%3D&url=https%3A%2F%2Fraw.githubusercontent.com%2Fcruzpazv%2Fuahpet-homeassistant%2Fmain%2Fhacs.json&query=%24.homeassistant)](https://www.home-assistant.io/)
 
 Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, but the official Tuya integration only shows their standard data points. This package talks to them **locally** and exposes everything the UAHPET app can do, plus dashboard cards.
 
