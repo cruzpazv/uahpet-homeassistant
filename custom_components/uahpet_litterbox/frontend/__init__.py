@@ -11,7 +11,7 @@ from homeassistant.loader import async_get_integration
 from ..const import DOMAIN
 
 URL_BASE = f"/{DOMAIN}_static"
-CARDS_JS = "uahpet-litterbox-cards.js"
+CARDS_JS = "uahpet-cards.js"
 
 
 async def async_register_cards(hass: HomeAssistant) -> None:

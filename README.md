@@ -10,7 +10,7 @@
 
 Home Assistant integration for the **UAHPET stainless steel smart litter box** (Tuya product `y0kvbmrnprybewtd`, category `msp`). It talks to the litter box **locally** and exposes every data point, including the 19 that the official Tuya integration does not show: levelling, emptying, child lock, sleep mode, ionizer, radar, waste bin status, the cat's weight per visit and more.
 
-Comes with three dashboard cards.
+Comes with three litter box dashboard cards, plus a card for the **UAHPET air purifier** ("Pet Air Purifier Slim") that uses the entities of the official Tuya integration.
 
 - Local push: no cloud, updates within a second
 - Every DP of the device, with English and Spanish names
@@ -91,6 +91,23 @@ show_advanced: false                      # true adds the hidden diagnostic and 
 type: custom:uahpet-litterbox-history-card
 days: 30                                  # cat weight per visit and visits per day
 ```
+
+### Air purifier card
+
+The UAHPET air purifier (Tuya category `kj`, product `dhhzjzdaiyshx2md`) only has 8 data points, and the official [Tuya integration](https://www.home-assistant.io/integrations/tuya) already exposes all of them. This repo does not add a second integration for it, only a card built on those Tuya entities (XTend Tuya works too):
+
+```yaml
+type: custom:uahpet-purifier-card
+device_id: <the purifier's device>        # optional: defaults to the first Tuya air purifier
+show_modes: true                          # manual / auto / sleep / tipping
+show_speed: true                          # sleep, 1, 2, 3
+show_timer: true                          # off, 2–10 h
+show_extras: true                         # child lock and filter reset (needs a second tap)
+```
+
+The card shows power, air quality, remaining filter life (amber below 30 %, red below 15 %), mode, speed and timer. With several purifiers, add one card per purifier and pick its device in the editor.
+
+The cards are served by this integration, so the UAHPET Litterbox integration must be set up for the purifier card to load.
 
 Full example: [examples/dashboard.yaml](examples/dashboard.yaml).
 

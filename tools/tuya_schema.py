@@ -112,6 +112,11 @@ def dump(api, dev_id, out):
     specs = safe(api.get, f"/v1.0/devices/{dev_id}/specifications")
     shadow = safe(api.get, f"/v2.0/cloud/thing/{dev_id}/shadow/properties")
 
+    if info is None and model_raw is None:
+        sys.exit(
+            f"No data for '{dev_id}'. --device must be the device id (1st column of the listing, ~22 chars), "
+            "not the product id (3rd column, 16 chars)."
+        )
     model = json.loads(model_raw["model"]) if model_raw and model_raw.get("model") else None
     for name, obj in [("info", info), ("model", model), ("specifications", specs), ("shadow", shadow)]:
         if obj is not None:
@@ -141,7 +146,7 @@ def dump(api, dev_id, out):
     if info:
         lines += [f"- category: `{info.get('category')}`", f"- product_id: `{info.get('product_id')}`",
                   f"- product_name: {info.get('product_name')}", f"- model: {info.get('model', '')}", ""]
-    lines += ["| DP | code | name | type | mode | range | value | std spec |",
+    lines += ["| DP | code | name | type | mode | range | value | code in std set |",
               "|---:|---|---|---|---|---|---|---|"]
     lines += ["| " + " | ".join(str(c).replace("|", "\\|") for c in r) + " |" for r in rows]
     for svc in (model or {}).get("services", []):
@@ -153,7 +158,7 @@ def dump(api, dev_id, out):
         f.write(md)
     print(md)
     hidden = sum(1 for r in rows if r[7] == "**NO**")
-    print(f"{len(rows)} DPs, {hidden} not in standard spec. Files → {out}/ (info.json has local_key: keep private)")
+    print(f"{len(rows)} DPs, {hidden} with a code not in the standard set (it may still be there renamed, e.g. lock = child_lock). Files → {out}/ (info.json has local_key: keep private)")
 
 
 def main():

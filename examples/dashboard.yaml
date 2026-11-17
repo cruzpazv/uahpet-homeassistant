@@ -15,3 +15,10 @@ sections:
     cards:
       - type: custom:uahpet-litterbox-history-card
         days: 30
+  - type: grid
+    cards:
+      # One card per purifier. Pick each device in the card editor (device_id).
+      - type: custom:uahpet-purifier-card
+        title: Salón
+      - type: custom:uahpet-purifier-card
+        title: Cuarto
