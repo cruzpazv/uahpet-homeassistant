@@ -10,6 +10,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import UahpetConfigEntry, UahpetCoordinator, signal_visit
+from .cats import UNIDENTIFIED
 from .entity import UahpetEntity
 
 VISIT = EventEntityDescription(key="visit", event_types=["visit"])
@@ -24,8 +25,12 @@ async def async_setup_entry(
 
 
 class UahpetVisitEvent(UahpetEntity, EventEntity):
+    """event_type is the cat's name (or "unidentified") when cat profiles are set, otherwise "visit"."""
+
     def __init__(self, coordinator: UahpetCoordinator) -> None:
         super().__init__(coordinator, VISIT)
+        cats = coordinator.cats.names if coordinator.cats else []
+        self._attr_event_types = ["visit", *cats, UNIDENTIFIED] if cats else ["visit"]
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -35,5 +40,6 @@ class UahpetVisitEvent(UahpetEntity, EventEntity):
 
     @callback
     def _on_visit(self, data: dict[str, Any]) -> None:
-        self._trigger_event("visit", data)
+        cat = data.get("cat")
+        self._trigger_event(cat if cat in self.event_types else "visit", data)
         self.async_write_ha_state()

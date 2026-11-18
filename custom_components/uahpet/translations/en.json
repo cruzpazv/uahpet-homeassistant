@@ -243,7 +243,8 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "visit": "Visit"
+              "visit": "Visit",
+              "unidentified": "Unidentified"
             }
           }
         }

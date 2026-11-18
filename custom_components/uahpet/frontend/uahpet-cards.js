@@ -13,6 +13,8 @@ const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_vis
 const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", cancel: "Cancel", confirm_btn: "Continue",
+    weight_chart: "Weight", change: "{v} kg in {n} days", ed_layout: "Layout", ed_avatar_size: "Photo size (px)", ed_show_photo: "Show photo",
+    lay_horizontal: "Horizontal", lay_vertical: "Vertical", c_weight: "UAHPET weight per cat", c_weight_d: "Weight of each cat over time, one line per cat.",
     hide_unk: "Hide unidentified", show_unk: "Show unidentified ({n})", clear_unk: "Clear unidentified",
     dlg_clear_t: "Clear unidentified visits?", dlg_clear: "They are removed from the log and today's count is reset.", dlg_clear_ok: "Clear",
     ed_show_toggle: "Show hide / clear buttons",
@@ -101,6 +103,8 @@ const I18N = {
   },
   es: {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", cancel: "Cancelar", confirm_btn: "Continuar",
+    weight_chart: "Peso", change: "{v} kg en {n} días", ed_layout: "Disposición", ed_avatar_size: "Tamaño de la foto (px)", ed_show_photo: "Mostrar foto",
+    lay_horizontal: "Horizontal", lay_vertical: "Vertical", c_weight: "Peso por gato UAHPET", c_weight_d: "Peso de cada gato a lo largo del tiempo, una línea por gato.",
     hide_unk: "Ocultar sin identificar", show_unk: "Mostrar sin identificar ({n})", clear_unk: "Borrar sin identificar",
     dlg_clear_t: "¿Borrar las visitas sin identificar?", dlg_clear: "Se quitan del registro y se pone a cero la cuenta de hoy.", dlg_clear_ok: "Borrar",
     ed_show_toggle: "Mostrar botones de ocultar / borrar",
@@ -1040,9 +1044,11 @@ class CatCardBase extends LitterCard {
     const lastTxt = known(last) ? t(h, "last_at", { t: fmtClock(h, new Date(last.state)) }) : t(h, "never");
     const health = h.states[cat.health];
     const alerts = health?.state === "on" ? (health.attributes.reasons || []).map((r) => t(h, `hl_${r}`, { v: health.attributes[r] })) : [];
-    const pic = catPicture(h, cat);
+    const pic = c.show_photo !== false && catPicture(h, cat);
+    const size = Number(c.avatar_size) || 0;
     const sub = [c.show_visits !== false ? t(h, "today_n", { n: visits }) : "", c.show_last !== false ? lastTxt : ""].filter(Boolean).join(" · ");
-    return `<button class="cat-tile ${big ? "big" : ""} ${alerts.length ? "sick" : ""}" data-act="cat" data-val="${esc(cat.weight || cat.visits)}">
+    return `<button class="cat-tile ${big ? "big" : ""} ${c.layout === "vertical" ? "vertical" : ""} ${alerts.length ? "sick" : ""}" data-act="cat" data-val="${esc(cat.weight || cat.visits)}"
+      ${size ? `style="--avatar:${size}px"` : ""}>
       ${pic ? `<img class="avatar" src="${esc(pic)}" alt="">` : `<span class="avatar" style="color:${esc(color)}"><ha-icon icon="mdi:cat"></ha-icon></span>`}
       <span class="cat-body"><span class="cat-name">${esc(cat.name)}</span>
         ${c.show_weight !== false && w !== null ? `<span class="cat-kg">${esc(fmtNum(h, w, 2))} kg</span>` : ""}
@@ -1054,7 +1060,7 @@ class CatCardBase extends LitterCard {
 }
 
 class UahpetCatsCard extends CatCardBase {
-  static defaults = { columns: 2, show_weight: true, show_visits: true, show_last: true };
+  static defaults = { columns: 2, layout: "horizontal", show_photo: true, show_weight: true, show_visits: true, show_last: true };
   static getConfigElement() { return document.createElement("uahpet-cats-card-editor"); }
   static getStubConfig() { return {}; }
   body() {
@@ -1068,7 +1074,7 @@ class UahpetCatsCard extends CatCardBase {
 }
 
 class UahpetCatCard extends CatCardBase {
-  static defaults = { show_weight: true, show_visits: true, show_last: true };
+  static defaults = { layout: "horizontal", show_photo: true, show_weight: true, show_visits: true, show_last: true };
   static getConfigElement() { return document.createElement("uahpet-cat-card-editor"); }
   static getStubConfig(hass) { return { cat: catSource(hass, litterDevices(hass)[0])?.cats[0]?.name || "" }; }
   getCardSize() { return 2; }
@@ -1259,6 +1265,109 @@ class UahpetVisitsChartCard extends CatCardBase {
     return `${head}<div class="sub">${esc(summary)}</div>
       <svg class="gchart" viewBox="0 0 ${W} ${H + 20}" role="img"><line class="axis" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>
       <text class="max" x="0" y="9">${max}</text>${hits}${bars}${labels}</svg><div class="legend">${legend}</div>`;
+  }
+}
+
+/* ---------- weight per cat ---------- */
+
+class UahpetWeightChartCard extends CatCardBase {
+  static defaults = { days: 30 };
+  static getConfigElement() { return document.createElement("uahpet-weight-chart-card-editor"); }
+  static getStubConfig() { return { days: 30 }; }
+
+  _range() { return this._days || Number(this._config.days) || 30; }
+
+  handle(act, key, val) {
+    if (act === "days") { this._days = Number(val); this._picked = null; }
+    else if (act === "slot") this._picked = this._picked === Number(val) ? null : Number(val);
+    else if (act === "leg") { const s = new Set(this._hidden || []); s.has(val) ? s.delete(val) : s.add(val); this._hidden = s; }
+  }
+
+  extraKey() {
+    const days = this._range();
+    if (this._src && this._hass.callWS && (!this._fetchedAt || Date.now() - this._fetchedAt > 600000 || this._fetchedDays !== days)) this._fetch(days);
+    return `${super.extraKey()}|${this._version || 0}|${days}|${this._picked}|${[...(this._hidden || [])].join(",")}`;
+  }
+
+  async _fetch(days) {
+    this._fetchedAt = Date.now();
+    this._fetchedDays = days;
+    try {
+      this._stats = await this._hass.callWS({
+        type: "recorder/statistics_during_period", start_time: new Date(Date.now() - days * 86400000).toISOString(),
+        statistic_ids: this._src.cats.map((c) => c.weight).filter(Boolean), period: days <= 7 ? "hour" : "day", types: ["mean"],
+      });
+    } catch (e) { this._stats = {}; }
+    this._version = (this._version || 0) + 1;
+    this._key = null;
+    this._render();
+  }
+
+  body() {
+    const h = this._hass, c = this._config, days = this._range();
+    const range = [7, 30, 90].map((d) => `<button class="chip ${d === days ? "sel" : ""}" data-act="days" data-val="${d}">${esc(t(h, "days_n", { n: d }))}</button>`).join("");
+    const head = `<div class="card-head"><div class="title">${esc(c.title || t(h, "weight_chart"))}</div><div class="range">${range}</div></div>`;
+    if (!this._src) return head + this.noCats();
+    if (!this._stats) return `${head}<div class="empty">${esc(t(h, "loading"))}</div>`;
+    const tsOfRow = (row) => (typeof row.start === "number" ? row.start : Date.parse(row.start));
+    const series = this._src.cats.map((cat, i) => {
+      const pts = new Map((this._stats[cat.weight] || []).filter((r) => r.mean != null).map((r) => [tsOfRow(r), r.mean]));
+      const live = num(h.states[cat.weight]);
+      if (live !== null) pts.set(Date.now(), live);  // the current learned weight closes the line
+      return { name: cat.name, color: catColor(h, cat, i, c), pts };
+    });
+    const hidden = this._hidden || new Set();
+    const shown = series.filter((s) => !hidden.has(s.name));
+    const times = [...new Set(shown.flatMap((s) => [...s.pts.keys()]))].sort((a, b) => a - b);
+    const values = shown.flatMap((s) => [...s.pts.values()]);
+    if (!times.length || !values.length) return `${head}<div class="empty">${esc(t(h, "no_data"))}</div>`;
+    const W = 320, H = 150, padY = 14;
+    const vmin = Math.min(...values), vmax = Math.max(...values);
+    let lo = vmin, hi = vmax;
+    if (hi - lo < 0.4) { const mid = (hi + lo) / 2; lo = mid - 0.2; hi = mid + 0.2; }
+    lo -= (hi - lo) * 0.08; hi += (hi - lo) * 0.08;
+    const t0 = times[0], t1 = times[times.length - 1] === t0 ? t0 + 1 : times[times.length - 1];
+    const X = (ts) => ((ts - t0) / (t1 - t0)) * W, Y = (v) => H - padY - ((v - lo) / (hi - lo)) * (H - 2 * padY);
+    let lines = "";
+    for (const s of shown) {
+      const pts = [...s.pts.entries()].sort((a, b) => a[0] - b[0]);
+      lines += `<polyline class="wline" stroke="${esc(s.color)}" points="${pts.map(([ts, v]) => `${X(ts).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}"/>`;
+      if (pts.length <= 40) lines += pts.map(([ts, v]) => `<circle class="wdot" cx="${X(ts).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="${esc(s.color)}"/>`).join("");
+    }
+    const slots = times.length;
+    let hits = "", picked = "";
+    times.forEach((ts, i) => {
+      const x0 = i === 0 ? 0 : (X(times[i - 1]) + X(ts)) / 2, x1 = i === slots - 1 ? W : (X(ts) + X(times[i + 1])) / 2;
+      hits += `<rect class="hit" data-act="slot" data-val="${i}" x="${x0.toFixed(1)}" y="0" width="${Math.max(1, x1 - x0).toFixed(1)}" height="${H}"/>`;
+    });
+    if (this._picked !== null && this._picked !== undefined && times[this._picked] !== undefined) {
+      const x = X(times[this._picked]);
+      picked = `<line class="cursor" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="0" y2="${H}"/>`;
+    }
+    const fmtDay = (ts) => new Intl.DateTimeFormat(locale(h), days <= 7 ? { weekday: "short", hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short" }).format(new Date(ts));
+    const labels = `<line class="grid" x1="0" x2="${W}" y1="${Y(vmax).toFixed(1)}" y2="${Y(vmax).toFixed(1)}"/>
+      <line class="grid" x1="0" x2="${W}" y1="${Y(vmin).toFixed(1)}" y2="${Y(vmin).toFixed(1)}"/>
+      <text class="ylab" x="0" y="${(Y(vmax) - 3).toFixed(1)}">${esc(fmtNum(h, vmax, 2))} kg</text>
+      <text class="ylab" x="0" y="${(Y(vmin) + 11).toFixed(1)}">${esc(fmtNum(h, vmin, 2))} kg</text>
+      <text class="x" x="2" y="${H + 14}" text-anchor="start">${esc(new Intl.DateTimeFormat(locale(h), { day: "numeric", month: "short" }).format(new Date(t0)))}</text>
+      <text class="x today" x="${W - 2}" y="${H + 14}" text-anchor="end">${esc(t(h, "today_h"))}</text>`;
+    let summary;
+    if (this._picked !== null && this._picked !== undefined && times[this._picked] !== undefined) {
+      const ts = times[this._picked];
+      summary = `${fmtDay(ts)}: ${shown.filter((s) => s.pts.has(ts)).map((s) => `${s.name} ${fmtNum(h, s.pts.get(ts), 2)} kg`).join(" · ")}`;
+    } else summary = t(h, "last_days", { n: days });
+    const legend = series.map((s) => {
+      const pts = [...s.pts.entries()].sort((a, b) => a[0] - b[0]);
+      const last = pts.length ? pts[pts.length - 1][1] : null, first = pts.length ? pts[0][1] : null;
+      const delta = last !== null && first !== null ? last - first : null;
+      const d = delta === null ? "" : `${delta > 0 ? "+" : delta < 0 ? "−" : "±"}${fmtNum(h, Math.abs(delta), 2)}`;
+      return `<button class="leg ${hidden.has(s.name) ? "off" : ""}" data-act="leg" data-val="${esc(s.name)}" aria-pressed="${!hidden.has(s.name)}">
+        <span class="dot" style="background:${esc(s.color)}"></span>${esc(s.name)}
+        ${last !== null ? `<b>${esc(fmtNum(h, last, 2))} kg</b>` : ""}${d ? `<span class="sub">${esc(t(h, "change", { v: d, n: days }))}</span>` : ""}</button>`;
+    }).join("");
+    return `${head}<div class="sub">${esc(summary)}</div>
+      <svg class="gchart wchart" viewBox="0 0 ${W} ${H + 20}" role="img"><line class="axis" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>
+      ${hits}${picked}${lines}${labels}</svg><div class="legend">${legend}</div>`;
   }
 }
 
@@ -1609,7 +1718,10 @@ const STYLE = `<style>
   .cat-tile.sick { background: color-mix(in srgb, var(--bad) 10%, transparent); }
   .avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; display: grid; place-items: center;
     background: var(--card-background-color, #fff); color: var(--primary-color); }
-  .cat-tile.big .avatar { width: 72px; height: 72px; background: var(--soft); }
+  .cat-tile.big .avatar { width: var(--avatar, 72px); height: var(--avatar, 72px); background: var(--soft); }
+  .cat-tile .avatar { width: var(--avatar, 52px); height: var(--avatar, 52px); }
+  .cat-tile .avatar ha-icon { --mdc-icon-size: calc(var(--avatar, 52px) * .55); }
+  .cat-tile.vertical { flex-direction: column; text-align: center; } .cat-tile.vertical .cat-body { align-items: center; width: 100%; }
   .avatar ha-icon { --mdc-icon-size: 28px; }
   .cat-body { display: flex; flex-direction: column; min-width: 0; }
   .cat-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1635,6 +1747,8 @@ const STYLE = `<style>
   .gchart .axis { stroke: var(--divider-color); }
   .gchart .hit { fill: transparent; cursor: pointer; } .gchart .hit.picked { fill: var(--soft); }
   .legend { display: flex; flex-wrap: wrap; gap: 6px; }
+  .wchart .wline { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .wchart .ylab { text-anchor: start; } .wchart .grid { stroke: var(--divider-color); stroke-dasharray: 2 4; } .wchart .cursor { stroke: var(--muted); stroke-dasharray: 3 3; }
   .leg { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 16px; background: var(--soft); font-size: .9em; }
   .leg.off { opacity: .45; } .leg .dot { width: 10px; height: 10px; border-radius: 50%; } .leg .sub { font-size: .9em; }
   .count { min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; display: grid; place-items: center; font-weight: 600;
@@ -1670,10 +1784,10 @@ const catNames = (hass, config) => catSource(hass, config?.device_id || litterDe
 define("uahpet-cats-card", UahpetCatsCard);
 define("uahpet-cats-card-editor", makeEditor((h, c) => [DEVICE_FIELD, TITLE_FIELD,
   { name: "cats", selector: { select: { multiple: true, mode: "list", options: catNames(h, c) } } },
-  { name: "columns", selector: { number: { min: 1, max: 4, mode: "box" } } }, bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatsCard)));
+  { name: "columns", selector: { number: { min: 1, max: 4, mode: "box" } } }, { name: "layout", selector: { select: { mode: "dropdown", options: ["horizontal", "vertical"].map((v) => ({ value: v, label: t(h, `lay_${v}`) })) } } }, { name: "avatar_size", selector: { number: { min: 24, max: 200, step: 4, mode: "box", unit_of_measurement: "px" } } }, bool("show_photo"), bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatsCard)));
 define("uahpet-cat-card", UahpetCatCard);
 define("uahpet-cat-card-editor", makeEditor((h, c) => [DEVICE_FIELD,
-  { name: "cat", selector: { select: { mode: "dropdown", options: catNames(h, c) } } }, bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatCard)));
+  { name: "cat", selector: { select: { mode: "dropdown", options: catNames(h, c) } } }, { name: "layout", selector: { select: { mode: "dropdown", options: ["horizontal", "vertical"].map((v) => ({ value: v, label: t(h, `lay_${v}`) })) } } }, { name: "avatar_size", selector: { number: { min: 24, max: 200, step: 4, mode: "box", unit_of_measurement: "px" } } }, bool("show_photo"), bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatCard)));
 define("uahpet-visits-card", UahpetVisitsCard);
 define("uahpet-visits-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD,
   { name: "count", selector: { number: { min: 1, max: 50, mode: "box" } } }, bool("collapsible"),
@@ -1681,6 +1795,8 @@ define("uahpet-visits-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD,
   bool("show_weight"), bool("show_duration"), bool("show_unidentified"), bool("show_toggle")], D(UahpetVisitsCard)));
 define("uahpet-visits-chart-card", UahpetVisitsChartCard);
 define("uahpet-visits-chart-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, choice(h, "days", [7, 30]), bool("show_unidentified")], D(UahpetVisitsChartCard)));
+define("uahpet-weight-chart-card", UahpetWeightChartCard);
+define("uahpet-weight-chart-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, choice(h, "days", [7, 30, 90])], D(UahpetWeightChartCard)));
 define("uahpet-litterbox-maintenance-mini-card", UahpetMaintenanceMiniCard);
 define("uahpet-litterbox-maintenance-mini-card-editor", makeEditor(() => [DEVICE_FIELD]));
 define("uahpet-purifier-mini-card", UahpetPurifierMiniCard);
@@ -1694,7 +1810,7 @@ for (const [type, name] of [
   ["uahpet-litterbox-card", "c_main"], ["uahpet-litterbox-timeline-card", "c_timeline"], ["uahpet-litterbox-stats-card", "c_stats"],
   ["uahpet-litterbox-settings-card", "c_settings"], ["uahpet-litterbox-maintenance-card", "c_maint"], ["uahpet-litterbox-mini-card", "c_mini"],
   ["uahpet-litterbox-maintenance-mini-card", "c_maint_mini"],
-  ["uahpet-cats-card", "c_cats"], ["uahpet-cat-card", "c_cat"], ["uahpet-visits-card", "c_visits"], ["uahpet-visits-chart-card", "c_chart"],
+  ["uahpet-cats-card", "c_cats"], ["uahpet-cat-card", "c_cat"], ["uahpet-visits-card", "c_visits"], ["uahpet-visits-chart-card", "c_chart"], ["uahpet-weight-chart-card", "c_weight"],
   ["uahpet-purifier-card", "c_purifier"], ["uahpet-purifier-mini-card", "c_purifier_mini"],
 ]) {
   if (!window.customCards.some((c) => c.type === type)) {

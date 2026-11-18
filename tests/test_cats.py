@@ -65,6 +65,7 @@ async def test_cats_end_to_end(hass: HomeAssistant, fake_client, hass_ws_client)
 
     visit = hass.states.get(er.async_get(hass).async_get_entity_id("event", DOMAIN, f"{DEVICE_ID}_visit"))
     assert visit.attributes["cat"] == "Simba" and visit.attributes["weight"] == 5.4
+    assert visit.attributes["event_type"] == "Simba"  # automations can trigger on the cat directly
     assert hass.states.get(_eid(hass, "last_visit")).state == "Simba"
     assert hass.states.get(_eid(hass, "cat_simba_visits_today")).state == "1"
     assert hass.states.get(_eid(hass, "cat_simba_weight")).attributes["cat"] == "Simba"

@@ -24,6 +24,8 @@ Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, b
 <td><img src="docs/images/main-radar.png" alt="Main card, cat nearby" width="380"><br>A cat nearby: operation paused</td></tr>
 <tr><td><img src="docs/images/cats.png" alt="Cats card" width="380"><br><b>Cats</b>: weight, visits today, last visit (each cat in its own colour)<br><br><img src="docs/images/cat.png" alt="Cat card" width="380"><br><b>Cat</b>: one cat</td>
 <td><img src="docs/images/visits-chart.png" alt="Visits per day card" width="380"><br><b>Visits per day</b>: one bar per cat</td></tr>
+<tr><td><img src="docs/images/weight-chart.png" alt="Weight per cat card" width="380"><br><b>Weight</b>: one line per cat, 7 / 30 / 90 days</td>
+<td><img src="docs/images/cat-vertical.png" alt="Cat card, vertical" width="380"><br><b>Cat</b> with <code>layout: vertical</code> and a bigger photo</td></tr>
 <tr><td><img src="docs/images/visits.png" alt="Recent visits card" width="380"><br><b>Recent visits</b>: collapsible, whole history, why a visit was not identified</td>
 <td><img src="docs/images/timeline.png" alt="Timeline card" width="380"><br><b>Timeline</b>: visits, cleanings, emptying, alerts</td></tr>
 <tr><td><img src="docs/images/stats.png" alt="Statistics card" width="380"><br><b>Statistics</b> per day<br><br><img src="docs/images/mini.png" alt="Compact card" width="380"><br><b>Compact</b><br><br><img src="docs/images/maintenance-mini.png" alt="Compact maintenance" width="380"><br><b>Compact maintenance</b></td>
@@ -82,7 +84,7 @@ Settings → Devices & services → Add integration → **UAHPET**: device ID an
 | Sensor *Cleanings today* | derived | Counted from the status changes, resets at midnight |
 | Sensor *Last cleaning* / *Next auto clean* | derived | Timestamps. Next auto clean = end of visit + clean delay (not set when auto clean or Do not disturb stop it) |
 | Sensor *Waste bin last emptied* | derived | When the bin goes back to OK after being full or taken out |
-| Event *Visit* | 7, 8, 106 | One event per visit with `weight` (kg) and `duration` (s) |
+| Event *Visit* | 7, 8, 106 | One event per visit with `weight` (kg) and `duration` (s); with cat profiles its type is the cat's name |
 | Binary sensors (8) | 21, 22 | Too many visits, no weight, cat stayed too long, not in place, weighing error, bin cover open, bin full, motor fault |
 | Button *Clean* / *Level litter* / *Empty litter* | 3 / 103 / 107 | |
 | Button *Stop* | 3 / 103 / 107 | Switches off the DP of the running task. Best effort: not confirmed that every firmware honours it |
@@ -118,9 +120,10 @@ The cards load automatically with the integration and follow the UAHPET app. Add
 | `custom:uahpet-litterbox-maintenance-card` | Waste bin drawing and state, when it was last emptied and cleaned, and every active alert with how to fix it (plus a Level button where it helps) |
 | `custom:uahpet-litterbox-mini-card` | One row: status, visits today and a clean button |
 | `custom:uahpet-litterbox-maintenance-mini-card` | One row: waste bin state, when it was emptied, number of alerts |
-| `custom:uahpet-cats-card` / `custom:uahpet-cat-card` | Cats (or one cat): photo or coloured icon, learned weight, visits today, last visit, health alerts with Litter Cat Identifier |
+| `custom:uahpet-cats-card` / `custom:uahpet-cat-card` | Cats (or one cat): photo or coloured icon, learned weight, visits today, last visit, health alerts. Options: `layout: vertical`, `avatar_size` (px), `show_photo`, `columns`, which cats |
 | `custom:uahpet-visits-card` | Recent visits with cat, weight, duration and why unidentified ones were not matched. `collapsible: true`, `count`, `expanded_count`, whole history |
 | `custom:uahpet-visits-chart-card` | Visits per day with one bar per cat, 7 or 30 days, tap a day / a cat |
+| `custom:uahpet-weight-chart-card` | Weight of each cat over time, one line per cat in its colour, 7 / 30 / 90 days; the legend shows the latest weight and the change; tap for the values |
 | `custom:uahpet-purifier-mini-card` | Air purifier in one row: state, air quality, filter, power button |
 | `custom:uahpet-purifier-card` | Air purifier (Tuya integration entities, XTend Tuya works too): power, air quality, filter life, mode, speed, timer, child lock and filter reset. A tilt over 45° (`tipping`) shows as an alert |
 
@@ -162,7 +165,7 @@ UAHPET can tell your cats apart on its own, like the UAHPET app: **UAHPET → Co
 | *Notifications* | Notify services (e.g. `notify.mobile_app_my_phone`, photo attached), unidentified visits, health alerts |
 | *Import from Litter Cat Identifier* | Copies cats, learned weights, photos, colours, notifications, settings and the whole visit history. Afterwards Litter Cat Identifier can be removed |
 
-Entities per cat: *{cat} weight* (learned), *{cat} visits today*, *{cat} last visit*, *{cat} health* (binary sensor, attribute `reasons`: `frequent_visits`, `long_visit`, `weight_loss`), *Recalibrate {cat} weight* (button). Plus *Last visit* (cat, weight, duration, why a visit was not identified, last 20 visits), *Unidentified visits today*, *Show unidentified visits* (switch, for the cards) and *Clear unidentified visits* (button). The *Visit* event gets a `cat` attribute. The whole visit history (up to 2000) is available through the websocket command `uahpet/visits`.
+Entities per cat: *{cat} weight* (learned), *{cat} visits today*, *{cat} last visit*, *{cat} health* (binary sensor, attribute `reasons`: `frequent_visits`, `long_visit`, `weight_loss`), *Recalibrate {cat} weight* (button). Plus *Last visit* (cat, weight, duration, why a visit was not identified, last 20 visits), *Unidentified visits today*, *Show unidentified visits* (switch, for the cards) and *Clear unidentified visits* (button). The *Visit* event's type is the cat's name (`Luna`, `Simba`, `unidentified`), so an automation can trigger on one cat directly; the `cat`, `weight` and `duration` attributes are there too. The whole visit history (up to 2000) is available through the websocket command `uahpet/visits`.
 
 Health alerts compare each cat with itself: many more visits than usual, a much longer visit than usual, or 5 % of weight lost in three weeks. They need about a week of history first. Not medical advice.
 
