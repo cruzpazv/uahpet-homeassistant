@@ -61,7 +61,7 @@
       "cannot_find": "No se encuentra el aparato en la red. Introduce su IP.",
       "cannot_connect": "No se puede conectar con el aparato.",
       "invalid_auth": "Clave local o versión del protocolo incorrectas.",
-      "not_supported": "Este aparato aún no está soportado. Soportado: arenero autolimpiable UAHPET. El registro muestra sus DP: abre una incidencia con ellos.",
+      "not_supported": "Este aparato aún no está soportado. Soportados: arenero autolimpiable UAHPET y purificador Pet Air Purifier Slim. El registro muestra sus DP: abre una incidencia con ellos.",
       "unknown": "Error inesperado, revisa el registro.",
       "wrong_device": "Ese ID responde como otro tipo de aparato UAHPET.",
       "invalid_name": "El nombre no puede estar vacío.",
@@ -150,6 +150,17 @@
           "unit_kg": "kg",
           "unit_lb": "lb"
         }
+      },
+      "countdown": {
+        "name": "Temporizador",
+        "state": {
+          "cancel": "No",
+          "2h": "2 h",
+          "4h": "4 h",
+          "6h": "6 h",
+          "8h": "8 h",
+          "10h": "10 h"
+        }
       }
     },
     "sensor": {
@@ -237,6 +248,17 @@
       },
       "cat_learned_weight": {
         "name": "Peso de {cat}"
+      },
+      "air_quality": {
+        "name": "Calidad del aire",
+        "state": {
+          "great": "Excelente",
+          "medium": "Regular",
+          "severe": "Mala"
+        }
+      },
+      "filter_utilization": {
+        "name": "Vida del filtro"
       }
     },
     "switch": {
@@ -266,6 +288,9 @@
       },
       "show_unidentified": {
         "name": "Mostrar visitas sin identificar"
+      },
+      "filter_cartridge_reset": {
+        "name": "Reiniciar filtro"
       }
     },
     "event": {

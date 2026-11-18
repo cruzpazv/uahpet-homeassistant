@@ -29,9 +29,10 @@ def test_get_enum_and_bytes():
 
 def test_detect_profile():
     assert detect_profile(SAMPLE_DPS) is PROFILES_BY_KEY["litterbox"]
-    # The UAHPET air purifier Slim (Tuya kj) is left to the Tuya integration.
+    # The UAHPET air purifier Slim (Tuya kj) is recognised too (local control, all its speeds).
     purifier = {"1": True, "3": "auto", "4": "P2", "5": 79, "7": False, "11": False, "18": "cancel", "21": "great"}
-    assert detect_profile(purifier) is None
+    assert detect_profile(purifier) is PROFILES_BY_KEY["purifier"]
+    assert detect_profile({"1": True, "7": False}) is None
 
 
 def test_profile_keys_unique():

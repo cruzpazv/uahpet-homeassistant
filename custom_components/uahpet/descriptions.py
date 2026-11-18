@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorEntityDescription
 from homeassistant.components.button import ButtonEntityDescription
+from homeassistant.components.fan import FanEntityDescription
 from homeassistant.components.number import NumberEntityDescription
 from homeassistant.components.select import SelectEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
@@ -55,3 +56,26 @@ class UahpetNumberDescription(NumberEntityDescription):
 @dataclass(frozen=True, kw_only=True)
 class UahpetSelectDescription(SelectEntityDescription):
     dp: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class UahpetFanDescription(FanEntityDescription):
+    switch_dp: int
+    mode_dp: int | None = None
+    modes: list[str] = field(default_factory=list)
+    speed_dp: int | None = None
+    speeds: list[str] = field(default_factory=list)  # slowest first
+
+
+def speed_to_percentage(speeds: list[str], value: Any) -> int | None:
+    """Same mapping as Home Assistant's Tuya integration: position * 100 // count."""
+    if value not in speeds:
+        return None
+    return (speeds.index(value) + 1) * 100 // len(speeds)
+
+
+def percentage_to_speed(speeds: list[str], percentage: int) -> str:
+    for i, speed in enumerate(speeds):
+        if percentage <= (i + 1) * 100 // len(speeds):
+            return speed
+    return speeds[-1]

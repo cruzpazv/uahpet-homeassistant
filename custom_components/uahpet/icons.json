@@ -72,6 +72,9 @@
       },
       "weight_unit": {
         "default": "mdi:weight"
+      },
+      "countdown": {
+        "default": "mdi:timer-outline"
       }
     },
     "sensor": {
@@ -140,6 +143,12 @@
       },
       "cat_learned_weight": {
         "default": "mdi:cat"
+      },
+      "air_quality": {
+        "default": "mdi:air-filter"
+      },
+      "filter_utilization": {
+        "default": "mdi:air-filter"
       }
     },
     "switch": {
@@ -178,11 +187,19 @@
         "state": {
           "off": "mdi:eye-off-outline"
         }
+      },
+      "filter_cartridge_reset": {
+        "default": "mdi:restore"
       }
     },
     "event": {
       "visit": {
         "default": "mdi:paw"
+      }
+    },
+    "fan": {
+      "purifier": {
+        "default": "mdi:air-purifier"
       }
     }
   },

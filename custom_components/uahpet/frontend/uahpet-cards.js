@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.6.1";
+const VERSION = "0.7.0";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
@@ -16,6 +16,7 @@ const I18N = {
     ev_burying: "Waste buried", st_burying: "Burying the waste", ed_show_burying: "Show burying", ed_scale: "Size",
     add_cat: "Add a cat", manage_cats: "Manage cats", f_name: "Name", f_weight: "Approximate weight (kg)", f_color: "Colour", add_btn: "Add",
     add_hint: "Photo, notifications and more in Manage cats.", adding: "Adding…",
+    speed_cloud: "Speeds 1–3 aren't available through the Tuya cloud for this purifier (it only declares one). Add the purifier to UAHPET to control them locally.",
     air_short: "Air", display: "Display", display_on: "Display on", display_off: "Display off", auto_mode: "Auto", sleep_mode_p: "Sleep",
     next_speed: "Next speed", more_settings: "Settings", c_purifier_bar: "UAHPET air purifier (buttons)", c_purifier_bar_d: "Status line with air quality and a row of round buttons.",
     weight_chart: "Weight", change: "{v} kg in {n} days", ed_layout: "Layout", ed_avatar_size: "Photo size (px)", ed_show_photo: "Show photo",
@@ -113,6 +114,7 @@ const I18N = {
     ev_burying: "Excrementos enterrados", st_burying: "Enterrando los excrementos", ed_show_burying: "Mostrar enterrados", ed_scale: "Tamaño",
     add_cat: "Añadir un gato", manage_cats: "Gestionar gatos", f_name: "Nombre", f_weight: "Peso aproximado (kg)", f_color: "Color", add_btn: "Añadir",
     add_hint: "Foto, avisos y más en Gestionar gatos.", adding: "Añadiendo…",
+    speed_cloud: "Las velocidades 1–3 no están disponibles por la nube de Tuya en este purificador (solo declara una). Añádelo a UAHPET para controlarlas en local.",
     air_short: "Aire", display: "Pantalla", display_on: "Pantalla encendida", display_off: "Pantalla apagada", auto_mode: "Auto", sleep_mode_p: "Noche",
     next_speed: "Siguiente velocidad", more_settings: "Ajustes", c_purifier_bar: "Purificador UAHPET (botones)", c_purifier_bar_d: "Línea de estado con la calidad del aire y una fila de botones redondos.",
     weight_chart: "Peso", change: "{v} kg en {n} días", ed_layout: "Disposición", ed_avatar_size: "Tamaño de la foto (px)", ed_show_photo: "Mostrar foto",
@@ -1530,6 +1532,9 @@ class UahpetPurifierCard extends UahpetCard {
     else if (act === "reset" && this._confirm(key)) this._call("switch", "turn_on", key);
   }
 
+  /** The fan entity has a speed setting but only one value: speeds can't be set (Tuya cloud). */
+  _speedLocked(fan) { return !!fan && Number(fan.attributes.percentage_step) >= 100; }
+
   /** Spin time (s) of the fan icon: sleep is the slowest, then each speed; auto follows its current speed. */
   _spin(fan) {
     const mode = fan?.attributes.preset_mode;
@@ -1542,9 +1547,11 @@ class UahpetPurifierCard extends UahpetCard {
     return Number((3.8 - 2.8 * f).toFixed(2));
   }
 
+  /** Speeds the fan entity offers. A single one (the Tuya cloud's definition of this purifier) can't be chosen: none. */
   _speeds(fan) {
     const step = Number(fan.attributes.percentage_step);
     const n = step > 0 ? Math.round(100 / step) : 0;
+    if (n <= 1) return [];
     // Tuya: percentage = (index + 1) * 100 // n; this purifier has sleep, P1, P2, P3
     return Array.from({ length: n }, (_, i) => ({
       pct: Math.floor(((i + 1) * 100) / n),
@@ -1610,6 +1617,7 @@ class UahpetPurifierCard extends UahpetCard {
       </div>
       ${c.show_modes && modes.length ? `<div class="group"><div class="glabel">${esc(t(this._hass, "mode"))}</div>
         ${seg("mode", modes.map((m) => [m, t(this._hass, `mode_${m}`), MODE_ICONS[m]]), on ? mode : null)}</div>` : ""}
+      ${c.show_speed && this._speedLocked(fan) ? `<div class="group"><div class="glabel">${esc(t(this._hass, "speed"))}</div><div class="help">${esc(t(this._hass, "speed_cloud"))}</div></div>` : ""}
       ${c.show_speed && speeds.length ? `<div class="group"><div class="glabel">${esc(t(this._hass, "speed"))}</div>
         ${seg("speed", speeds.map((s) => [String(s.pct), s.label]), on && speedIdx >= 0 ? String(speeds[speedIdx].pct) : null)}</div>` : ""}
       ${c.show_timer && timer?.attributes.options?.length ? `<div class="group"><div class="glabel">${esc(t(this._hass, "timer"))}</div>
@@ -1705,6 +1713,7 @@ class UahpetPurifierBarCard extends UahpetPurifierCard {
       const timer = this._state("countdown"), lock = this._state("child_lock"), reset = this._map.filter_cartridge_reset;
       const seg = (act, items, active) => `<div class="seg">${items.map(([val, label]) => `<button class="${val === active ? "on" : ""}" data-act="${act}" data-val="${esc(val)}" ${dis}><span>${esc(label)}</span></button>`).join("")}</div>`;
       panel = `<div class="ppanel">
+        ${this._speedLocked(fan) ? `<div class="help">${esc(t(h, "speed_cloud"))}</div>` : ""}
         ${speeds.length ? `<div class="group"><div class="glabel">${esc(t(h, "speed"))}</div>${seg("speed", speeds.map((x) => [String(x.pct), x.label]), on && speedIdx >= 0 ? String(speeds[speedIdx].pct) : null)}</div>` : ""}
         ${timer?.attributes.options?.length ? `<div class="group"><div class="glabel">${esc(t(h, "timer"))}</div>${seg("timer", timer.attributes.options.map((o) => [o, o === "cancel" ? t(h, "timer_cancel") : o]), timer.state)}</div>` : ""}
         ${lock || reset ? `<div class="toggles">
@@ -1720,7 +1729,7 @@ class UahpetPurifierBarCard extends UahpetPurifierCard {
         .pbar { padding: 4px 6px; } .pbtn { width: 38px; height: 38px; } .pbtn ha-icon { --mdc-icon-size: 21px; }
         .ppanel { gap: 10px; }
       </style><div class="head">
-        <button class="badge ${tilted || offline ? "bad" : aqTone}" data-act="info" data-key="${known(aq) ? "air_quality" : "fan"}">
+        <button class="badge ${tilted || offline ? "bad" : on ? aqTone : "idle"}" data-act="info" data-key="${known(aq) ? "air_quality" : "fan"}">
           <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${this._spin(fan)}s" icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon></button>
         <div class="titles"><div class="title">${esc(c.title || this._deviceName(this._dev) || t(h, "c_purifier"))}</div>
           <div class="sub ${tilted ? "bad-text" : ""}">${esc(line)}</div></div>

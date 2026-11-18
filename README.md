@@ -52,7 +52,7 @@ Rendered from the real cards with sample data.
 | Device | Tuya category / product | How | What you get |
 |---|---|---|---|
 | Self-cleaning litter box | `msp` / `y0kvbmrnprybewtd` | **This integration** (local) | Every DP: clean, level, empty, sleep mode, child lock, ionizer, radar, waste bin, alerts, cat weight per visit… The Tuya integration only shows 5 of 27 |
-| Air Purifier Slim | `kj` / `dhhzjzdaiyshx2md` | Official Tuya integration + the card from this package | All 8 DPs are already in the Tuya integration |
+| Air Purifier Slim | `kj` / `dhhzjzdaiyshx2md` | **This integration** (local, recommended) or the official Tuya integration | Fan with all 4 speeds (sleep, 1, 2, 3) and the modes, air quality, filter life, child lock, filter reset, timer. Through the Tuya integration only the *sleep* speed can be set: the Tuya cloud declares a single speed for this product |
 | Air Purifier (large, with hair suction) | `kj`? | Not yet | Needs a DP dump, see [Adding a device](#adding-a-device) |
 | Fresh Food Feeder | ? (app code `wsq`) | Not yet | Needs a DP dump |
 
@@ -79,7 +79,9 @@ The local key changes every time a device is paired again. Use **Reconfigure** o
 
 Settings → Devices & services → Add integration → **UAHPET**: device ID and local key. The name, IP address and protocol version are optional: the device type and protocol are detected automatically, and an empty IP means "find it on the network". Reserve the device's IP in your router.
 
-**Using the official Tuya integration as well?** Both can run at the same time. To avoid duplicated entities, disable the litter box in the Tuya integration (Devices → litter box → ⋮ → Disable). Keep the air purifiers in the Tuya integration.
+**Using the official Tuya integration as well?** Both can run at the same time. To avoid duplicated entities, disable in the Tuya integration each device you add to UAHPET (Devices → device → ⋮ → Disable).
+
+**Air purifier:** add it the same way (device ID + local key). It is recognised automatically. Like any local Tuya device it must be reachable from Home Assistant (not on an isolated guest Wi-Fi).
 
 ## Litter box entities
 
@@ -166,7 +168,7 @@ The 0.1.0 `uahpet-litterbox-history-card` still works and now shows the statisti
 
 ### Air purifier cards
 
-They use the purifier's entities from the official Tuya integration (XTend Tuya works too), so they work without adding the purifier to UAHPET.
+They work with the purifier added to UAHPET (local, every speed) or with its entities from the official Tuya integration (XTend Tuya works too). Through the Tuya integration the cards hide the speed controls and explain why: the Tuya cloud declares a single speed for this purifier. The fan icon turns grey when the purifier is off.
 
 | Card | What it shows |
 |---|---|

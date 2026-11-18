@@ -10,8 +10,9 @@ from typing import Any
 
 from .base import Profile
 from .litterbox import LITTERBOX
+from .purifier import PURIFIER
 
-PROFILES: tuple[Profile, ...] = (LITTERBOX,)
+PROFILES: tuple[Profile, ...] = (LITTERBOX, PURIFIER)
 PROFILES_BY_KEY = {p.key: p for p in PROFILES}
 
 

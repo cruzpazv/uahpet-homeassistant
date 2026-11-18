@@ -18,6 +18,7 @@ SAMPLE_DPS: dict[str, Any] = {
 
 class FakeClient:
     instances: list[FakeClient] = []
+    initial: dict[str, Any] = SAMPLE_DPS  # what the device reports when connecting
 
     def __init__(self, device_id, host, local_key, version, on_dps, on_connection) -> None:
         self.on_dps, self.on_connection = on_dps, on_connection
@@ -28,7 +29,7 @@ class FakeClient:
     def start(self) -> None:
         self.started = True
         self.on_connection(True)
-        self.on_dps(dict(SAMPLE_DPS))
+        self.on_dps(dict(FakeClient.initial))
 
     def stop(self) -> None:
         self.stopped = True
@@ -45,5 +46,6 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 @pytest.fixture
 def fake_client():
     FakeClient.instances = []
+    FakeClient.initial = SAMPLE_DPS
     with patch("custom_components.uahpet.coordinator.UahpetClient", FakeClient):
         yield FakeClient
