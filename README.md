@@ -17,6 +17,8 @@ Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, b
 
 ## Card previews
 
+### Litter box
+
 <table>
 <tr><td><img src="docs/images/main.png" alt="Main card" width="380"><br><b>Main</b>: animated litter box, auto clean countdown, today's numbers, cats, actions</td>
 <td><img src="docs/images/main-busy.png" alt="Main card while cleaning" width="380"><br>While a task runs, its button becomes <b>Stop</b></td></tr>
@@ -30,10 +32,16 @@ Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, b
 <td><img src="docs/images/timeline.png" alt="Timeline card" width="380"><br><b>Timeline</b>: visits, cleanings, emptying, alerts</td></tr>
 <tr><td><img src="docs/images/stats.png" alt="Statistics card" width="380"><br><b>Statistics</b> per day<br><br><img src="docs/images/mini.png" alt="Compact card" width="380"><br><b>Compact</b><br><br><img src="docs/images/maintenance-mini.png" alt="Compact maintenance" width="380"><br><b>Compact maintenance</b></td>
 <td><img src="docs/images/maintenance.png" alt="Maintenance card" width="380"><br><b>Maintenance</b>: waste bin and how to fix each alert</td></tr>
-<tr><td><img src="docs/images/settings.png" alt="Settings card" width="380"><br><b>Settings</b>, with the app's explanations</td>
-<td><img src="docs/images/purifier.png" alt="Air purifier card" width="380"><br><b>Air purifier</b> (Tuya integration entities)<br><br><img src="docs/images/purifier-mini.png" alt="Compact air purifier" width="380"><br><b>Compact air purifier</b></td></tr>
-<tr><td><img src="docs/images/purifier-bar-dark.png" alt="Air purifier with buttons, dark theme" width="380"><br><b>Air purifier, buttons</b> (dark theme): status line with the air quality, round buttons</td>
-<td><img src="docs/images/purifier-bar-panel.png" alt="Air purifier with buttons, settings open" width="380"><br>…with <i>Settings</i> open: speed, timer, child lock, filter reset</td></tr>
+<tr><td><img src="docs/images/settings.png" alt="Settings card" width="380"><br><b>Settings</b>, with the app's explanations</td><td></td></tr>
+</table>
+
+### Air purifier
+
+<table>
+<tr><td><img src="docs/images/purifier-bar-dark.png" alt="Air purifier with buttons, dark theme" width="380"><br><b>Buttons</b> (dark theme): status line ending with the air quality, round buttons</td>
+<td><img src="docs/images/purifier-bar-panel.png" alt="Air purifier with buttons, settings open" width="380"><br><b>Buttons</b> with <i>Settings</i> open: speed, timer, child lock, filter reset</td></tr>
+<tr><td><img src="docs/images/purifier.png" alt="Air purifier card" width="380"><br><b>Full</b>: air quality, filter, mode, speed, timer</td>
+<td><img src="docs/images/purifier-mini.png" alt="Compact air purifier" width="380"><br><b>Compact</b>: one row</td></tr>
 </table>
 
 Rendered from the real cards with sample data.
@@ -113,6 +121,8 @@ Derived values are kept across restarts (stored per device).
 
 The cards load automatically with the integration and follow the UAHPET app. Add them from the card picker (search "UAHPET"); all have a visual editor. `device_id` is optional: without it each card uses the first matching device. Texts in English and Spanish.
 
+### Litter box cards
+
 | Card | What it shows |
 |---|---|
 | `custom:uahpet-litterbox-card` | Animated drawing of the litter box (drum turns while cleaning, litter waves while levelling, cat and radar pulse when a cat is nearby), status in the app's words, **auto clean countdown**, bin / litter / alert chips, today's visits, cleanings and last cat, a row with each cat, Clean / Level / Empty (Level and Empty ask for confirmation; while a task runs its button becomes **Stop**), quick toggles for auto clean and Do not disturb |
@@ -126,9 +136,6 @@ The cards load automatically with the integration and follow the UAHPET app. Add
 | `custom:uahpet-visits-card` | Recent visits with cat, weight, duration and why unidentified ones were not matched. `collapsible: true`, `count`, `expanded_count`, whole history |
 | `custom:uahpet-visits-chart-card` | Visits per day with one bar per cat, 7 or 30 days, tap a day / a cat |
 | `custom:uahpet-weight-chart-card` | Weight of each cat over time, one line per cat in its colour, 7 / 30 / 90 days; the legend shows the latest weight and the change; tap for the values |
-| `custom:uahpet-purifier-bar-card` | Air purifier: one status line (on/off, mode, filter, display when the purifier has one, air quality) and a row of round buttons: power, auto, next speed, settings (speed, timer, child lock, filter reset), sleep |
-| `custom:uahpet-purifier-mini-card` | Air purifier in one row: state, air quality, filter, power button |
-| `custom:uahpet-purifier-card` | Air purifier (Tuya integration entities, XTend Tuya works too): power, air quality, filter life, mode, speed, timer, child lock and filter reset. A tilt over 45° (`tipping`) shows as an alert |
 
 ```yaml
 type: custom:uahpet-litterbox-card
@@ -152,6 +159,21 @@ metric: visits          # visits, cleanings, duration, weight
 ```
 
 The 0.1.0 `uahpet-litterbox-history-card` still works and now shows the statistics card.
+
+### Air purifier cards
+
+They use the purifier's entities from the official Tuya integration (XTend Tuya works too), so they work without adding the purifier to UAHPET.
+
+| Card | What it shows |
+|---|---|
+| `custom:uahpet-purifier-bar-card` | One status line (on/off, mode, filter, display when the purifier has one, air quality) and a row of round buttons: power, auto, next speed, settings (speed, timer, child lock, filter reset), sleep |
+| `custom:uahpet-purifier-mini-card` | One row: state, air quality, filter, power button |
+| `custom:uahpet-purifier-card` | Power, air quality, filter life, mode, speed, timer, child lock and filter reset. A tilt over 45° (`tipping`) shows as an alert |
+
+```yaml
+type: custom:uahpet-purifier-bar-card
+device_id: <the purifier's device>   # optional: first Tuya air purifier
+```
 
 The cards are served by this integration, so at least one UAHPET device must be set up for them to load.
 
