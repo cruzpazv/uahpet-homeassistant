@@ -17,8 +17,23 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
+from .cats import DEFAULT_MIN_WEIGHT, DEFAULT_SMOOTHING, DEFAULT_TOLERANCE, CatIdentifier
 from .client import UahpetClient
-from .const import CONF_DEVICE_ID, CONF_LOCAL_KEY, CONF_PROFILE, CONF_PROTOCOL, DOMAIN
+from .const import (
+    CONF_CAT_COLOR,
+    CONF_CAT_NAME,
+    CONF_CAT_PICTURE,
+    CONF_CAT_WEIGHT,
+    CONF_CATS,
+    CONF_DEVICE_ID,
+    CONF_LOCAL_KEY,
+    CONF_MIN_WEIGHT,
+    CONF_PROFILE,
+    CONF_PROTOCOL,
+    CONF_SMOOTHING,
+    CONF_TOLERANCE,
+    DOMAIN,
+)
 from .profiles import PROFILES_BY_KEY
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,6 +60,8 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.device_id: str = entry.data[CONF_DEVICE_ID]
         self.profile = PROFILES_BY_KEY[entry.data.get(CONF_PROFILE, "litterbox")]
         self.tracker = self.profile.tracker_factory() if self.profile.tracker_factory else None
+        self.cats = self._cats_from_options(entry.options) if self.profile.visit_data else None
+        self.options = dict(entry.options)
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
         self.first_data = asyncio.Event()
         self._seen: dict[str, float] = {}  # DP id -> monotonic time it was last reported
@@ -60,9 +77,44 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             on_connection=lambda ok: hass.loop.call_soon_threadsafe(self._set_connected, ok),
         )
 
+    @staticmethod
+    def _cats_from_options(options: dict[str, Any]) -> CatIdentifier:
+        return CatIdentifier(
+            profiles={
+                c[CONF_CAT_NAME]: {
+                    "weight": float(c[CONF_CAT_WEIGHT]),
+                    "picture": c.get(CONF_CAT_PICTURE) or None,
+                    "color": "#{:02x}{:02x}{:02x}".format(*c[CONF_CAT_COLOR]) if c.get(CONF_CAT_COLOR) else None,
+                }
+                for c in options.get(CONF_CATS, [])
+            },
+            tolerance=float(options.get(CONF_TOLERANCE, DEFAULT_TOLERANCE)),
+            smoothing=float(options.get(CONF_SMOOTHING, DEFAULT_SMOOTHING)),
+            min_weight=float(options.get(CONF_MIN_WEIGHT, DEFAULT_MIN_WEIGHT)),
+        )
+
+    def _as_dict(self) -> dict[str, Any]:
+        return {
+            "tracker": self.tracker.as_dict() if self.tracker else None,
+            "cats": self.cats.as_dict() if self.cats else None,
+        }
+
+    @callback
+    def _save(self) -> None:
+        self._store.async_delay_save(self._as_dict, 2)
+
+    async def async_flush(self) -> None:
+        if self.tracker or self.cats:
+            await self._store.async_save(self._as_dict())
+
     async def async_load(self) -> None:
+        data = await self._store.async_load() or {}
+        if "tracker" not in data:  # 0.2 stored the tracker alone
+            data = {"tracker": data}
+        if self.cats:
+            self.cats.load(data.get("cats"))
         if self.tracker:
-            self.tracker.load(await self._store.async_load())
+            self.tracker.load(data.get("tracker"))
             # Day counters roll over at midnight even without device updates.
             self.config_entry.async_on_unload(
                 async_track_time_change(self.hass, self._on_midnight, hour=0, minute=0, second=1)
@@ -85,7 +137,7 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self.tracker and self.first_data.is_set():
             result = self.tracker.update(old, new, dt_util.now())
             if result.changed:
-                self._store.async_delay_save(self.tracker.as_dict, 2)
+                self._save()
             if result.visit_ended and self.profile.visit_data:
                 self._start_visit(now_m)
         self.async_set_updated_data(new)
@@ -133,7 +185,16 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @callback
     def _emit_visit(self) -> None:
-        data = self.profile.visit_data(self.data or {})
+        dps = self.data or {}
+        data = self.profile.visit_data(dps)
+        if self.cats and self.cats.profiles:
+            reason = self.profile.visit_reason(dps) if self.profile.visit_reason else None
+            visit = self.cats.record(data.get("weight"), data.get("duration"), dt_util.now(), reason)
+            data = {**data, "cat": visit["cat"]}
+            if "reason" in visit:
+                data["reason"] = visit["reason"]
+            self._save()
+            self.async_update_listeners()
         async_dispatcher_send(self.hass, signal_visit(self.config_entry.entry_id), data)
 
     @callback

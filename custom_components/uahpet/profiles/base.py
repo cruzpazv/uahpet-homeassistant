@@ -34,6 +34,8 @@ class Profile:
     tracker_factory: Callable[[], Any] | None = None
     visit_data: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     visit_dps: tuple[str, ...] = ()  # DPs a visit waits for before its event fires
+    # Why an unidentified reading is not a cat, from the device state (cat profiles)
+    visit_reason: Callable[[dict[str, Any]], str | None] | None = None
 
     def matches(self, dps: dict[str, Any]) -> bool:
         return self.signature <= set(dps)

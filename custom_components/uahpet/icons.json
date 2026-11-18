@@ -35,6 +35,9 @@
       },
       "empty": {
         "default": "mdi:delete-empty"
+      },
+      "stop": {
+        "default": "mdi:stop-circle-outline"
       }
     },
     "number": {
@@ -107,6 +110,21 @@
       },
       "last_bin_emptied": {
         "default": "mdi:delete-restore"
+      },
+      "cat_visits_today": {
+        "default": "mdi:paw"
+      },
+      "cat_last_visit": {
+        "default": "mdi:clock-outline"
+      },
+      "last_visit": {
+        "default": "mdi:cat"
+      },
+      "unidentified_today": {
+        "default": "mdi:help-circle-outline"
+      },
+      "cat_learned_weight": {
+        "default": "mdi:cat"
       }
     },
     "switch": {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import UahpetConfigEntry
@@ -22,6 +23,11 @@ class UahpetButton(UahpetEntity, ButtonEntity):
     entity_description: UahpetButtonDescription
 
     async def async_press(self) -> None:
-        await self.coordinator.async_set_dp(
-            self.entity_description.dp, self.entity_description.press_value, optimistic=False
-        )
+        desc = self.entity_description
+        if desc.press_fn:
+            target = desc.press_fn(self.coordinator.data or {})
+            if target is None:
+                raise HomeAssistantError("Nothing to stop: the litter box is not cleaning, levelling or emptying")
+            await self.coordinator.async_set_dp(*target, optimistic=False)
+            return
+        await self.coordinator.async_set_dp(desc.dp, desc.press_value, optimistic=False)

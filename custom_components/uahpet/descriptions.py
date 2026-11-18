@@ -42,6 +42,7 @@ class UahpetSwitchDescription(SwitchEntityDescription):
 class UahpetButtonDescription(ButtonEntityDescription):
     dp: int
     press_value: Any = True
+    press_fn: Callable[[DPS], tuple[int, Any] | None] | None = None  # (dp, value) chosen from the state
 
 
 @dataclass(frozen=True, kw_only=True)

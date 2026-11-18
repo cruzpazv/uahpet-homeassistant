@@ -3,14 +3,32 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
+// per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
+const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
 
 /* ---------- texts ---------- */
 
 const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", cancel: "Cancel", confirm_btn: "Continue",
+    stop: "Stop", dlg_empty_ok: "Empty", cats: "Cats", today_n: "{n} today", last_at: "last {t}", never: "no visits yet",
+    visits_card: "Recent visits", th_time: "Time", th_cat: "Cat", th_weight: "Weight", th_duration: "Duration",
+    more: "Show more", less: "Show less", all_hist: "Whole history", chart: "Visits per day", last_days: "Last {n} days (tap a day for details)",
+    no_cats: "No cats yet. Add them in UAHPET → Configure, or install Litter Cat Identifier.", pick_cat: "Pick a cat in the card editor.",
+    r_partial_after_visit: "Probably {cat} half inside, right after the visit", r_no_weight: "Visit without a weight",
+    r_refill_or_partial: "Probably a litter refill or a cat half inside", r_device_busy: "The litter box was moving the litter",
+    r_stayed_too_long: "A cat stayed too long: the litter was levelled and the weight reset",
+    hl_frequent_visits: "{v} visits today, much more than usual", hl_long_visit: "{v} s visit, much longer than usual", hl_weight_loss: "Lost {v} % of weight in 3 weeks",
+    ed_columns: "Cats per row", ed_cat: "Cat", ed_cats: "Cats to show (empty = all)", ed_count: "Visits shown", ed_collapsible: "Collapsible list",
+    ed_expanded_count: "Visits when expanded", ed_show_weight: "Show weight", ed_show_visits: "Show visits today", ed_show_last: "Show last visit",
+    ed_show_duration: "Show duration", ed_show_unidentified: "Show unidentified visits",
+    c_cats: "UAHPET cats", c_cats_d: "Each cat: photo, weight, visits today, last visit.", c_cat: "UAHPET cat", c_cat_d: "One cat.",
+    c_visits: "UAHPET recent visits", c_visits_d: "Latest visits with the cat, weight and duration; collapsible, whole history.",
+    c_chart: "UAHPET visits per day", c_chart_d: "Bars per day with one bar per cat.",
+    c_maint_mini: "UAHPET maintenance (compact)", c_maint_mini_d: "One row: waste bin and alerts.",
+    c_purifier_mini: "UAHPET air purifier (compact)", c_purifier_mini_d: "One row: state, air quality, filter and power.",
     auto_clean: "Auto clean", sleep_mode: "Do not disturb", child_lock: "Child lock", ionizer: "Ionizer", radar: "Radar",
     last_cat_weight: "Last cat", visits_today: "Visits today", cleanings_today: "Cleanings", last_visit_duration: "Last visit",
     offline: "Offline", not_found: "No UAHPET litter box found. Add the UAHPET integration first.",
@@ -80,6 +98,22 @@ const I18N = {
   },
   es: {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", cancel: "Cancelar", confirm_btn: "Continuar",
+    stop: "Detener", dlg_empty_ok: "Vaciar", cats: "Gatos", today_n: "{n} hoy", last_at: "última {t}", never: "sin visitas",
+    visits_card: "Últimas visitas", th_time: "Hora", th_cat: "Gato", th_weight: "Peso", th_duration: "Duración",
+    more: "Ver más", less: "Ver menos", all_hist: "Todo el historial", chart: "Visitas por día", last_days: "Últimos {n} días (toca un día para ver el detalle)",
+    no_cats: "Aún no hay gatos. Añádelos en UAHPET → Configurar, o instala Litter Cat Identifier.", pick_cat: "Elige un gato en el editor de la tarjeta.",
+    r_partial_after_visit: "Probablemente {cat} medio dentro, justo tras su visita", r_no_weight: "Visita sin peso",
+    r_refill_or_partial: "Probablemente relleno de arena o un gato medio dentro", r_device_busy: "El arenero estaba moviendo la arena",
+    r_stayed_too_long: "Un gato estuvo demasiado tiempo: se niveló la arena y se reinició el peso",
+    hl_frequent_visits: "{v} visitas hoy, muchas más de lo habitual", hl_long_visit: "Visita de {v} s, mucho más larga de lo habitual", hl_weight_loss: "Ha perdido un {v} % de peso en 3 semanas",
+    ed_columns: "Gatos por fila", ed_cat: "Gato", ed_cats: "Gatos a mostrar (vacío = todos)", ed_count: "Visitas visibles", ed_collapsible: "Lista desplegable",
+    ed_expanded_count: "Visitas al desplegar", ed_show_weight: "Mostrar peso", ed_show_visits: "Mostrar visitas de hoy", ed_show_last: "Mostrar última visita",
+    ed_show_duration: "Mostrar duración", ed_show_unidentified: "Mostrar visitas sin identificar",
+    c_cats: "Gatos UAHPET", c_cats_d: "Cada gato: foto, peso, visitas de hoy, última visita.", c_cat: "Gato UAHPET", c_cat_d: "Un gato.",
+    c_visits: "Últimas visitas UAHPET", c_visits_d: "Últimas visitas con gato, peso y duración; desplegable y todo el historial.",
+    c_chart: "Visitas por día UAHPET", c_chart_d: "Barras por día con una barra por gato.",
+    c_maint_mini: "Mantenimiento UAHPET (compacta)", c_maint_mini_d: "Una fila: cubo de residuos y avisos.",
+    c_purifier_mini: "Purificador UAHPET (compacta)", c_purifier_mini_d: "Una fila: estado, calidad del aire, filtro y encendido.",
     auto_clean: "Limpieza automática", sleep_mode: "No molestar", child_lock: "Bloqueo infantil", ionizer: "Ionizador", radar: "Radar",
     last_cat_weight: "Último gato", visits_today: "Visitas hoy", cleanings_today: "Limpiezas", last_visit_duration: "Última visita",
     offline: "Sin conexión", not_found: "No hay ningún arenero UAHPET. Añade antes la integración UAHPET.",
@@ -196,33 +230,43 @@ function entityMap(hass, deviceId) {
   const map = {};
   if (!dev) return { dev: null, map };
   for (const e of Object.values(hass.entities)) {
-    if (e.platform === DOMAIN && e.device_id === dev && e.translation_key) map[e.translation_key] = e.entity_id;
+    if (e.platform !== DOMAIN || e.device_id !== dev || !e.translation_key) continue;
+    if (CAT_FIELDS[e.translation_key] && hass.states[e.entity_id]?.attributes?.cat) continue; // a cat, not the litter box
+    map[e.translation_key] = e.entity_id;
   }
   return { dev, map };
 }
 
-/** Litter Cat Identifier "last visit" sensor (its `history` attribute names the cat of each visit). */
-function catVisitsEntity(hass) {
-  return Object.values(hass?.entities || {}).find((e) => e.platform === "litter_cat_identifier" && e.translation_key === "last_visit")?.entity_id;
-}
 
-/** Cats from Litter Cat Identifier: name, photo, visits today, health. */
-function lciCats(hass) {
+
+function collectCats(hass, ents) {
   const cats = {};
-  for (const e of Object.values(hass?.entities || {})) {
-    if (e.platform !== "litter_cat_identifier") continue;
-    const field = { cat_visits_today: "visits", cat_weight: "weight", cat_health: "health" }[e.translation_key];
+  let lastVisit = null, unidentified = null, device = null;
+  for (const e of ents) {
+    if (e.translation_key === "last_visit") { lastVisit = e.entity_id; device = e.device_id; }
+    else if (e.translation_key === "unidentified_today") unidentified = e.entity_id;
+    const field = CAT_FIELDS[e.translation_key];
     const name = field && hass.states[e.entity_id]?.attributes?.cat;
     if (name) (cats[name] ||= { name })[field] = e.entity_id;
   }
-  return Object.values(cats);
+  return { cats: Object.values(cats), lastVisit, unidentified, device };
 }
 
-/** Litter Cat Identifier device id (for its history websocket command). */
-function lciDevice(hass) {
-  const id = catVisitsEntity(hass);
-  return id ? hass.entities[id]?.device_id : null;
+/** Cats of a litter box: UAHPET's own cat profiles, otherwise Litter Cat Identifier.
+    {kind, cats: [{name, weight, visits, last, health}], lastVisit, unidentified, ws: {type, device_id}} */
+function catSource(hass, litterDevice) {
+  const all = Object.values(hass?.entities || {});
+  const own = collectCats(hass, all.filter((e) => e.platform === DOMAIN && (!litterDevice || e.device_id === litterDevice)));
+  if (own.cats.length) return { ...own, kind: DOMAIN, ws: { type: `${DOMAIN}/visits`, device_id: own.device } };
+  const lci = collectCats(hass, all.filter((e) => e.platform === "litter_cat_identifier"));
+  if (lci.cats.length) return { ...lci, kind: "lci", ws: { type: "litter_cat_identifier/history", device_id: lci.device } };
+  return null;
 }
+
+const catIds = (src) => (src ? src.cats.flatMap((c) => [c.weight, c.visits, c.last, c.health]).concat(src.lastVisit, src.unidentified).filter(Boolean) : []);
+const catPicture = (hass, cat) => hass.states[cat.weight]?.attributes?.entity_picture;
+/** Card option `colors: {Name: "#hex"}` first, then the colour picked for the cat, then the palette. */
+const catColor = (hass, cat, i, config) => config?.colors?.[cat.name] || hass.states[cat.weight]?.attributes?.color || PALETTE[i % PALETTE.length];
 
 function purifierEntitiesByDevice(hass) {
   const devs = {};
@@ -273,7 +317,7 @@ function makeEditor(schemaFn, defaults = {}) {
         this.appendChild(this._form);
       }
       this._form.hass = this._hass;
-      this._form.schema = schemaFn(this._hass);
+      this._form.schema = schemaFn(this._hass, this._config);
       // ha-form does not apply defaults itself: show toggles with their real value.
       this._form.data = { ...defaults, ...this._config };
     }
@@ -344,7 +388,7 @@ class UahpetCard extends HTMLElement {
     const id = this._map[key];
     if (id) this._hass.callService(domain, service, { entity_id: id, ...data });
   }
-  _ask(title, text, run) { this._dialog = { title, text, run }; }
+  _ask(title, text, run, danger = null) { this._dialog = { title, text, run, danger }; }
 
   /** Two-tap confirmation (purifier); returns true on the second tap. */
   _confirm(key) {
@@ -372,10 +416,12 @@ class UahpetCard extends HTMLElement {
     const key = `${lang(this._hass)}|${this._armed}|${this._dialog?.title}|${this.extraKey()}|${watched.join(",")}`;
     if (key === this._key) return;
     this._key = key;
-    const dlg = this._dialog ? `<div class="dlg-back"><div class="dlg" role="dialog" aria-modal="true">
-        <div class="dlg-t">${esc(this._dialog.title)}</div><div class="dlg-x">${esc(this._dialog.text)}</div>
+    const d = this._dialog;
+    const dlg = d ? `<div class="dlg-back"><div class="dlg ${d.danger ? "danger" : ""}" role="alertdialog" aria-modal="true">
+        ${d.danger ? `<ha-icon class="dlg-i" icon="mdi:alert-outline"></ha-icon>` : ""}
+        <div class="dlg-t">${esc(d.title)}</div><div class="dlg-x">${esc(d.text)}</div>
         <div class="dlg-b"><button class="btn" data-act="dlg-cancel">${esc(t(this._hass, "cancel"))}</button>
-        <button class="btn primary" data-act="dlg-ok">${esc(t(this._hass, "confirm_btn"))}</button></div></div></div>` : "";
+        <button class="btn primary" data-act="dlg-ok">${esc(d.danger || t(this._hass, "confirm_btn"))}</button></div></div></div>` : "";
     this.shadowRoot.innerHTML = `${STYLE}<ha-card>${this.body()}${dlg}</ha-card>`;
     this.tick?.();
   }
@@ -435,9 +481,8 @@ class UahpetLitterboxCard extends LitterCard {
   static getConfigElement() { return document.createElement("uahpet-litterbox-card-editor"); }
 
   extraKey() {
-    // re-render when a cat (Litter Cat Identifier) changes too
-    const ids = lciCats(this._hass).flatMap((c) => [c.visits, c.weight, c.health]).concat(catVisitsEntity(this._hass) || []);
-    return ids.map((id) => this._hass.states[id]?.last_updated).join("|");
+    // re-render when a cat changes too
+    return catIds(catSource(this._hass, this._dev)).map((id) => this._hass.states[id]?.last_updated).join("|");
   }
   static getStubConfig(hass) { return { device_id: litterDevices(hass)[0] || "" }; }
 
@@ -446,7 +491,8 @@ class UahpetLitterboxCard extends LitterCard {
     if (act === "cat") fire(this, "hass-more-info", { entityId: val });
     else if (act === "toggle") this._call("switch", "toggle", key);
     else if (act === "press" && key === "clean") this._call("button", "press", "clean");
-    else if (act === "press" && key === "empty") this._ask(t(h, "dlg_empty_t"), t(h, "dlg_empty"), () => this._call("button", "press", "empty"));
+    else if (act === "press" && key === "empty") this._ask(t(h, "dlg_empty_t"), t(h, "dlg_empty"), () => this._call("button", "press", "empty"), t(h, "dlg_empty_ok"));
+    else if (act === "stop") this._call("button", "press", "stop");
     else if (act === "press" && key === "level") this._ask(t(h, "dlg_level_t"), t(h, "dlg_level"), () => this._call("button", "press", "level"));
   }
 
@@ -489,14 +535,15 @@ class UahpetLitterboxCard extends LitterCard {
         <ha-icon icon="${icon}"></ha-icon><span class="val">${esc(this._fmt(key))}</span><span class="lbl">${esc(label)}</span></button>` : "";
     const dis = offline || busy ? "disabled" : "";
     const quick = [["auto_clean", "mdi:robot-vacuum"], ["sleep_mode", "mdi:bell-sleep-outline"]].filter(([k]) => map[k]);
-    const cats = c.show_cats ? lciCats(h) : [];
-    const lastCat = h.states[catVisitsEntity(h)]?.state;
+    const src = c.show_cats ? catSource(h, this._dev) : null;
+    const cats = src ? src.cats : [];
+    const lastCat = src && h.states[src.lastVisit]?.state;
     const lastLabel = lastCat && cats.some((x) => x.name === lastCat) ? lastCat : t(h, "last_cat_weight");
-    const catRow = cats.map((cat) => {
-      const w = h.states[cat.weight], pic = w?.attributes?.entity_picture;
+    const catRow = cats.map((cat, i) => {
+      const pic = catPicture(h, cat), color = catColor(h, cat, i, c);
       const sick = h.states[cat.health]?.state === "on";
       return `<button class="cat-chip ${sick ? "sick" : ""}" data-act="cat" data-val="${esc(cat.weight || cat.visits)}">
-        ${pic ? `<img src="${esc(pic)}" alt="">` : `<span class="cat-ic"><ha-icon icon="mdi:cat"></ha-icon></span>`}
+        ${pic ? `<img src="${esc(pic)}" alt="">` : `<span class="cat-ic" style="color:${esc(color)}"><ha-icon icon="mdi:cat"></ha-icon></span>`}
         <span class="cat-n">${esc(cat.name)}</span><span class="cat-v">${esc(h.states[cat.visits]?.state ?? "0")}</span>
         ${sick ? `<ha-icon class="cat-h" icon="mdi:heart-pulse"></ha-icon>` : ""}</button>`;
     }).join("");
@@ -518,8 +565,10 @@ class UahpetLitterboxCard extends LitterCard {
       </div>` : ""}
       ${catRow ? `<div class="cat-row">${catRow}</div>` : ""}
       ${c.show_actions ? `<div class="actions">
-        ${[["clean", "mdi:broom"], ["level", "mdi:waves"], ["empty", "mdi:delete-empty"]].filter(([k]) => map[k]).map(([k, icon]) =>
-          `<button class="action" data-act="press" data-key="${k}" ${dis}><ha-icon icon="${icon}"></ha-icon>${esc(t(h, k))}</button>`).join("")}
+        ${[["clean", "mdi:broom", "cleaning"], ["level", "mdi:waves", "leveling"], ["empty", "mdi:delete-empty", "clearing"]].filter(([k]) => map[k]).map(([k, icon, running]) =>
+          status === running && map.stop
+            ? `<button class="action stop" data-act="stop" aria-label="${esc(t(h, "stop"))}"><ha-icon icon="mdi:stop-circle-outline"></ha-icon>${esc(t(h, "stop"))}</button>`
+            : `<button class="action" data-act="press" data-key="${k}" ${dis}><ha-icon icon="${icon}"></ha-icon>${esc(t(h, k))}</button>`).join("")}
       </div>` : ""}
       ${c.show_quick && quick.length ? `<div class="toggles">
         ${quick.map(([k, icon]) => {
@@ -540,7 +589,8 @@ class UahpetLitterboxTimelineCard extends LitterCard {
 
   extraKey() {
     // Re-fetch history when one of the timeline sources changes.
-    const ids = this._sources().concat(catVisitsEntity(this._hass) || []);
+    const src = catSource(this._hass, this._dev);
+    const ids = this._sources().concat(src?.lastVisit || []);
     const sig = ids.map((id) => this._hass.states[id]?.last_updated).join("|") + JSON.stringify(this._config);
     if (sig !== this._sig) { this._sig = sig; this._fetch(); }
     return `${this._version || 0}`;
@@ -564,11 +614,11 @@ class UahpetLitterboxTimelineCard extends LitterCard {
           minimal_response: false, no_attributes: false, significant_changes_only: false,
         });
       } catch (e) { this._history = {}; }
-      // The cat sensor only carries the latest 20 visits; Litter Cat Identifier gives the rest.
-      const dev = lciDevice(this._hass);
-      if (dev) {
+      // The cat sensor only carries the latest 20 visits; the integration gives the rest.
+      const src = catSource(this._hass, this._dev);
+      if (src?.ws.device_id) {
         try {
-          const res = await this._hass.callWS({ type: "litter_cat_identifier/history", device_id: dev, limit: 300 });
+          const res = await this._hass.callWS({ ...src.ws, limit: 300 });
           this._catHistory = res.history || [];
         } catch (e) { this._catHistory = null; }
       }
@@ -581,14 +631,15 @@ class UahpetLitterboxTimelineCard extends LitterCard {
   _events() {
     const h = this._hass, hist = this._history || {}, m = this._map, start = this._start().getTime();
     const items = [];
-    const cats = (this._catHistory || this._hass.states[catVisitsEntity(h)]?.attributes?.history || []).map((v) => ({ ...v, ts: Date.parse(v.time) }));
+    const src = catSource(h, this._dev);
+    const cats = (this._catHistory || (src && h.states[src.lastVisit]?.attributes?.history) || []).map((v) => ({ ...v, ts: Date.parse(v.time) }));
     // visits
     let attrs = {};
     for (const row of hist[m.visit] || []) {
       if (row.a) attrs = row.a;
       const ts = Date.parse(row.s);
       if (isNaN(ts) || ts < start || attrs.event_type !== "visit") continue;
-      const match = cats.find((v) => Math.abs(v.ts - ts) < 120000);
+      const match = attrs.cat ? { cat: attrs.cat } : cats.find((v) => Math.abs(v.ts - ts) < 120000);
       const cat = match ? (match.cat === "unidentified" ? t(h, "unidentified") : match.cat) : null;
       items.push({ ts, kind: "visit", icon: "mdi:paw", duration: attrs.duration, weight: attrs.weight, cat });
     }
@@ -827,9 +878,9 @@ class UahpetLitterboxSettingsCard extends LitterCard {
     if (!s) return "";
     const v = num(s);
     return `<div class="row"><div class="row-t"><div class="row-l">${esc(label)}</div>${help ? `<div class="help">${esc(help)}</div>` : ""}</div>
-      <div class="stepper"><button data-act="step" data-key="${key}" data-val="${-step}" aria-label="−" ${isOff(s) ? "disabled" : ""}>−</button>
+      <div class="stepper"><button data-act="step" data-key="${key}" data-val="${-step}" aria-label="−" ${isOff(s) ? "disabled" : ""}><ha-icon icon="mdi:minus"></ha-icon></button>
       <span class="val">${v === null ? "—" : esc(fmt(v))}</span>
-      <button data-act="step" data-key="${key}" data-val="${step}" aria-label="+" ${isOff(s) ? "disabled" : ""}>+</button></div></div>`;
+      <button data-act="step" data-key="${key}" data-val="${step}" aria-label="+" ${isOff(s) ? "disabled" : ""}><ha-icon icon="mdi:plus"></ha-icon></button></div></div>`;
   }
 
   _segment(key, label, help, labelKey) {
@@ -936,7 +987,10 @@ class UahpetLitterboxMiniCard extends LitterCard {
   getCardSize() { return 1; }
   getGridOptions() { return { columns: 6, min_columns: 4, rows: 1 }; }
 
-  handle(act) { if (act === "press") this._call("button", "press", "clean"); }
+  handle(act) {
+    if (act === "press") this._call("button", "press", "clean");
+    else if (act === "stop") this._call("button", "press", "stop");
+  }
 
   body() {
     const h = this._hass;
@@ -950,9 +1004,266 @@ class UahpetLitterboxMiniCard extends LitterCard {
       <button class="badge small ${alerts ? "bad" : tone}" data-act="info" data-key="work_status">
         <ha-icon class="${BUSY.includes(status) ? "spin" : ""}" icon="${alerts ? "mdi:alert-circle-outline" : STATUS_ICON[status] || "mdi:cat"}"></ha-icon></button>
       <div class="titles"><div class="title">${esc(this.cardTitle("c_mini"))}</div><div class="sub">${esc(sub)}</div></div>
-      ${this._map.clean ? `<button class="round" data-act="press" aria-label="${esc(t(h, "clean"))}" ${status === "offline" || BUSY.includes(status) ? "disabled" : ""}>
+      ${BUSY.includes(status) && this._map.stop
+        ? `<button class="round stop" data-act="stop" aria-label="${esc(t(h, "stop"))}"><ha-icon icon="mdi:stop"></ha-icon></button>`
+        : this._map.clean ? `<button class="round" data-act="press" aria-label="${esc(t(h, "clean"))}" ${status === "offline" ? "disabled" : ""}>
         <ha-icon icon="mdi:broom"></ha-icon></button>` : ""}
     </div>`;
+  }
+}
+
+/* ---------- cats (UAHPET cat profiles or Litter Cat Identifier) ---------- */
+
+class CatCardBase extends LitterCard {
+  lookup() {
+    const r = entityMap(this._hass, this._config.device_id);
+    this._src = catSource(this._hass, r.dev);
+    return r;
+  }
+  extraKey() { return catIds(this._src).map((id) => this._hass.states[id]?.last_updated).join("|"); }
+  noCats() { return `<div class="empty">${esc(t(this._hass, "no_cats"))}</div>`; }
+
+  tile(cat, big = false) {
+    const h = this._hass, c = this._config;
+    const color = catColor(h, cat, this._src.cats.indexOf(cat), c);
+    const w = num(h.states[cat.weight]);
+    const visits = h.states[cat.visits]?.state ?? "0";
+    const last = h.states[cat.last];
+    const lastTxt = known(last) ? t(h, "last_at", { t: fmtClock(h, new Date(last.state)) }) : t(h, "never");
+    const health = h.states[cat.health];
+    const alerts = health?.state === "on" ? (health.attributes.reasons || []).map((r) => t(h, `hl_${r}`, { v: health.attributes[r] })) : [];
+    const pic = catPicture(h, cat);
+    const sub = [c.show_visits !== false ? t(h, "today_n", { n: visits }) : "", c.show_last !== false ? lastTxt : ""].filter(Boolean).join(" · ");
+    return `<button class="cat-tile ${big ? "big" : ""} ${alerts.length ? "sick" : ""}" data-act="cat" data-val="${esc(cat.weight || cat.visits)}">
+      ${pic ? `<img class="avatar" src="${esc(pic)}" alt="">` : `<span class="avatar" style="color:${esc(color)}"><ha-icon icon="mdi:cat"></ha-icon></span>`}
+      <span class="cat-body"><span class="cat-name">${esc(cat.name)}</span>
+        ${c.show_weight !== false && w !== null ? `<span class="cat-kg">${esc(fmtNum(h, w, 2))} kg</span>` : ""}
+        ${sub ? `<span class="sub">${esc(sub)}</span>` : ""}
+        ${alerts.map((a) => `<span class="cat-alert"><ha-icon icon="mdi:heart-pulse"></ha-icon>${esc(a)}</span>`).join("")}</span></button>`;
+  }
+
+  handle(act, key, val) { if (act === "cat" && val) fire(this, "hass-more-info", { entityId: val }); }
+}
+
+class UahpetCatsCard extends CatCardBase {
+  static defaults = { columns: 2, show_weight: true, show_visits: true, show_last: true };
+  static getConfigElement() { return document.createElement("uahpet-cats-card-editor"); }
+  static getStubConfig() { return {}; }
+  body() {
+    const h = this._hass, c = this._config;
+    const head = c.title === "" ? "" : `<div class="card-head"><div class="title">${esc(c.title || t(h, "cats"))}</div></div>`;
+    if (!this._src) return head + this.noCats();
+    const wanted = Array.isArray(c.cats) && c.cats.length ? c.cats : null;
+    const tiles = this._src.cats.filter((cat) => !wanted || wanted.includes(cat.name)).map((cat) => this.tile(cat)).join("");
+    return `${head}<div class="cat-grid" style="--cols:${Number(c.columns) || 2}">${tiles}</div>`;
+  }
+}
+
+class UahpetCatCard extends CatCardBase {
+  static defaults = { show_weight: true, show_visits: true, show_last: true };
+  static getConfigElement() { return document.createElement("uahpet-cat-card-editor"); }
+  static getStubConfig(hass) { return { cat: catSource(hass, litterDevices(hass)[0])?.cats[0]?.name || "" }; }
+  getCardSize() { return 2; }
+  body() {
+    if (!this._src) return this.noCats();
+    const cat = this._src.cats.find((x) => x.name === this._config.cat);
+    return cat ? this.tile(cat, true) : `<div class="empty">${esc(t(this._hass, "pick_cat"))}</div>`;
+  }
+}
+
+class UahpetVisitsCard extends CatCardBase {
+  static defaults = { count: 8, collapsible: false, expanded_count: 20, show_weight: true, show_duration: true, show_unidentified: true };
+  static getConfigElement() { return document.createElement("uahpet-visits-card-editor"); }
+  static getStubConfig() { return { count: 8 }; }
+
+  extraKey() { return `${super.extraKey()}|${this._mode}|${this._fullVersion || 0}`; }
+
+  _wanted() {
+    const c = this._config, count = Number(c.count) || 8;
+    if (!c.collapsible) return count;
+    if (this._mode === "all") return Infinity;
+    if (this._mode === "expanded") return Math.max(count, Number(c.expanded_count) || 20);
+    return count;
+  }
+
+  handle(act, key, val) {
+    if (act === "mode") this._mode = val;
+    else super.handle(act, key, val);
+  }
+
+  async _fetch(limit, key) {
+    this._fullKey = key;
+    try {
+      const res = await this._hass.callWS({ ...this._src.ws, limit: limit === Infinity ? 0 : limit });
+      if (this._fullKey !== key) return;
+      this._full = res.history;
+      this._total = res.total;
+    } catch (e) { this._full = null; }
+    this._fullVersion = (this._fullVersion || 0) + 1;
+    this._key = null;
+    this._render();
+  }
+
+  body() {
+    const h = this._hass, c = this._config;
+    const head = `<div class="card-head"><div class="title">${esc(c.title || t(h, "visits_card"))}</div></div>`;
+    if (!this._src) return head + this.noCats();
+    const latest = h.states[this._src.lastVisit]?.attributes?.history || [];
+    const wanted = this._wanted();
+    let all = latest, loading = false;
+    if (wanted > latest.length && latest.length >= 20 && h.callWS) {
+      const key = `${h.states[this._src.lastVisit]?.last_updated}|${wanted}`;
+      if (this._fullKey === key && this._full) all = this._full;
+      else { loading = true; if (this._fullKey !== key) this._fetch(wanted, key); }
+    }
+    const visits = c.show_unidentified ? all : all.filter((v) => v.cat !== "unidentified");
+    if (!visits.length) return `${head}<div class="empty">${esc(t(h, "no_events"))}</div>`;
+    const shown = visits.slice(0, wanted);
+    const rows = shown.map((v) => {
+      const d = new Date(v.time);
+      const today = d.toDateString() === new Date().toDateString();
+      const when = today ? fmtClock(h, d) : `${new Intl.DateTimeFormat(locale(h), { day: "numeric", month: "short" }).format(d)} ${fmtClock(h, d)}`;
+      let cat = esc(v.cat);
+      if (v.cat === "unidentified") {
+        const why = v.reason ? t(h, `r_${v.reason}`, { cat: v.likely_cat || "?" }) : "";
+        cat = `<span class="unk">${esc(t(h, "unidentified"))}</span>${why ? `<span class="why">${esc(why)}</span>` : ""}`;
+      }
+      return `<tr><td class="when">${esc(when)}</td><td>${cat}</td>
+        ${c.show_weight ? `<td class="n">${typeof v.weight === "number" ? `${esc(fmtNum(h, v.weight, 2))} kg` : "—"}</td>` : ""}
+        ${c.show_duration ? `<td class="n">${typeof v.duration === "number" ? esc(fmtDur(v.duration)) : "—"}</td>` : ""}</tr>`;
+    }).join("");
+    const th = `<tr><th>${esc(t(h, "th_time"))}</th><th>${esc(t(h, "th_cat"))}</th>${c.show_weight ? `<th class="n">${esc(t(h, "th_weight"))}</th>` : ""}${c.show_duration ? `<th class="n">${esc(t(h, "th_duration"))}</th>` : ""}</tr>`;
+    let foot = "";
+    if (c.collapsible) {
+      const count = Number(c.count) || 8, expanded = Math.max(count, Number(c.expanded_count) || 20), mode = this._mode || "collapsed";
+      const btn = (m, icon, label) => `<button class="link" data-act="mode" data-val="${m}"><ha-icon icon="${icon}"></ha-icon>${esc(label)}</button>`;
+      const btns = [];
+      if (loading) btns.push(`<span class="sub">${esc(t(h, "loading"))}</span>`);
+      if (mode === "collapsed" && expanded > count && (visits.length > count || latest.length >= 20)) btns.push(btn("expanded", "mdi:chevron-down", t(h, "more")));
+      if (mode !== "all" && (visits.length > shown.length || latest.length >= 20)) btns.push(btn("all", "mdi:history", `${t(h, "all_hist")}${this._total ? ` (${this._total})` : ""}`));
+      if (mode !== "collapsed") btns.push(btn("collapsed", "mdi:chevron-up", t(h, "less")));
+      foot = btns.length ? `<div class="foot">${btns.join("")}</div>` : "";
+    }
+    return `${head}<div class="tbl ${shown.length > 20 ? "scroll" : ""}"><table>${th}${rows}</table></div>${foot}`;
+  }
+}
+
+const PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#b07aa1", "#edc948", "#76b7b2", "#ff9da7"];
+const GREY = "#9e9e9e";
+
+class UahpetVisitsChartCard extends CatCardBase {
+  static defaults = { days: 7, show_unidentified: true };
+  static getConfigElement() { return document.createElement("uahpet-visits-chart-card-editor"); }
+  static getStubConfig() { return { days: 7 }; }
+
+  handle(act, key, val) {
+    if (act === "days") { this._days = Number(val); this._picked = null; }
+    else if (act === "day") this._picked = this._picked === Number(val) ? null : Number(val);
+    else if (act === "leg") { const s = new Set(this._hidden || []); s.has(val) ? s.delete(val) : s.add(val); this._hidden = s; }
+  }
+
+  _range() { return this._days || Number(this._config.days) || 7; }
+
+  _series() {
+    const h = this._hass, src = this._src;
+    const list = src.cats.map((c, i) => ({ name: c.name, id: c.visits, color: catColor(h, c, i, this._config) }));
+    if (this._config.show_unidentified && src.unidentified) list.push({ name: t(h, "unidentified"), id: src.unidentified, color: GREY });
+    return list;
+  }
+
+  extraKey() {
+    const days = this._range();
+    if (this._src && this._hass.callWS && (!this._fetchedAt || Date.now() - this._fetchedAt > 300000 || this._fetchedDays !== days)) this._fetch(days);
+    return `${super.extraKey()}|${this._version || 0}|${days}|${this._picked}|${[...(this._hidden || [])].join(",")}`;
+  }
+
+  async _fetch(days) {
+    this._fetchedAt = Date.now();
+    this._fetchedDays = days;
+    const start = startOfToday();
+    start.setDate(start.getDate() - (days - 1));
+    try {
+      this._stats = await this._hass.callWS({
+        type: "recorder/statistics_during_period", start_time: start.toISOString(),
+        statistic_ids: this._series().map((s) => s.id).filter(Boolean), period: "day", types: ["change"],
+      });
+    } catch (e) { this._stats = {}; }
+    this._version = (this._version || 0) + 1;
+    this._key = null;
+    this._render();
+  }
+
+  body() {
+    const h = this._hass, c = this._config, days = this._range();
+    const range = [7, 30].map((d) => `<button class="chip ${d === days ? "sel" : ""}" data-act="days" data-val="${d}">${esc(t(h, "days_n", { n: d }))}</button>`).join("");
+    const head = `<div class="card-head"><div class="title">${esc(c.title || t(h, "chart"))}</div><div class="range">${range}</div></div>`;
+    if (!this._src) return head + this.noCats();
+    if (!this._stats) return `${head}<div class="empty">${esc(t(h, "loading"))}</div>`;
+    const start = startOfToday();
+    start.setDate(start.getDate() - (days - 1));
+    const dayAt = (i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; };
+    const series = this._series().map((s) => {
+      const byDay = {};
+      for (const row of this._stats[s.id] || []) byDay[new Date(typeof row.start === "number" ? row.start : Date.parse(row.start)).toDateString()] = row.change || 0;
+      const values = Array.from({ length: days }, (_, i) => byDay[dayAt(i).toDateString()] || 0);
+      const live = num(h.states[s.id]);
+      if (live !== null) values[days - 1] = live;
+      return { ...s, values };
+    });
+    const hidden = this._hidden || new Set();
+    const shown = series.filter((s) => !hidden.has(s.name));
+    const W = 320, H = 140, top = 14, slot = W / days, group = slot * 0.82, bw = shown.length ? group / shown.length : 0;
+    const max = Math.max(1, ...shown.flatMap((s) => s.values));
+    let bars = "", labels = "", hits = "";
+    for (let i = 0; i < days; i++) {
+      const x0 = slot * i + (slot - group) / 2;
+      shown.forEach((s, j) => {
+        const v = s.values[i], bh = (v / max) * (H - top);
+        if (v > 0) {
+          bars += `<rect x="${(x0 + j * bw + 0.5).toFixed(2)}" y="${(H - bh).toFixed(2)}" width="${Math.max(1, bw - 1).toFixed(2)}" height="${bh.toFixed(2)}" rx="${Math.min(3, bw / 3).toFixed(2)}" fill="${esc(s.color)}"/>`;
+          if (days <= 7 && bw >= 9) bars += `<text class="v" x="${(x0 + j * bw + bw / 2).toFixed(2)}" y="${(H - bh - 3).toFixed(2)}">${v}</text>`;
+        }
+      });
+      if (days <= 7 || i % 5 === (days - 1) % 5) {
+        const label = days <= 7 ? new Intl.DateTimeFormat(locale(h), { weekday: "short" }).format(dayAt(i)) : dayAt(i).getDate();
+        labels += `<text class="x ${i === days - 1 ? "today" : ""}" x="${(slot * i + slot / 2).toFixed(2)}" y="${H + 14}">${esc(label)}</text>`;
+      }
+      hits += `<rect class="hit ${this._picked === i ? "picked" : ""}" data-act="day" data-val="${i}" x="${(slot * i).toFixed(2)}" y="0" width="${slot.toFixed(2)}" height="${H}"/>`;
+    }
+    const summary = this._picked !== null && this._picked !== undefined
+      ? `${new Intl.DateTimeFormat(locale(h), { weekday: "long", day: "numeric", month: "short" }).format(dayAt(this._picked))}: ${shown.map((s) => `${s.name} ${s.values[this._picked]}`).join(" · ")}`
+      : t(h, "last_days", { n: days });
+    const legend = series.map((s) => {
+      const total = s.values.reduce((a, b) => a + b, 0);
+      return `<button class="leg ${hidden.has(s.name) ? "off" : ""}" data-act="leg" data-val="${esc(s.name)}" aria-pressed="${!hidden.has(s.name)}">
+        <span class="dot" style="background:${esc(s.color)}"></span>${esc(s.name)}<span class="sub">${total} · ${esc(t(h, "per_day", { v: fmtNum(h, total / days) }))}</span></button>`;
+    }).join("");
+    return `${head}<div class="sub">${esc(summary)}</div>
+      <svg class="gchart" viewBox="0 0 ${W} ${H + 20}" role="img"><line class="axis" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>
+      <text class="max" x="0" y="9">${max}</text>${hits}${bars}${labels}</svg><div class="legend">${legend}</div>`;
+  }
+}
+
+/* ---------- compact maintenance ---------- */
+
+class UahpetMaintenanceMiniCard extends LitterCard {
+  static getConfigElement() { return document.createElement("uahpet-litterbox-maintenance-mini-card-editor"); }
+  static getStubConfig(hass) { return { device_id: litterDevices(hass)[0] || "" }; }
+  getCardSize() { return 1; }
+  getGridOptions() { return { columns: 6, min_columns: 4, rows: 1 }; }
+  body() {
+    const h = this._hass;
+    if (!this._map.work_status) return this.notFound();
+    const bin = this._state("bin_status");
+    const emptied = this._state("last_bin_emptied");
+    const alerts = ALERTS.filter((k) => this._state(k)?.state === "on");
+    const tone = alerts.length ? "bad" : !known(bin) || bin.state === "bin_normal" ? "ok" : "warn";
+    const title = alerts.length ? t(h, `a_${alerts[0]}`) + (alerts.length > 1 ? ` +${alerts.length - 1}` : "") : known(bin) ? t(h, `bin_${bin.state}`) : t(h, "maintenance");
+    const sub = known(emptied) ? t(h, "emptied_ago", { t: fmtAgo(h, new Date(emptied.state)) }) : t(h, "never_emptied");
+    return `<div class="mini"><button class="badge small ${tone}" data-act="info" data-key="${alerts.length ? alerts[0] : "bin_status"}">
+        <ha-icon icon="${alerts.length ? ALERT_ICONS[alerts[0]] : "mdi:delete-outline"}"></ha-icon></button>
+      <div class="titles"><div class="title">${esc(title)}</div><div class="sub">${esc(sub)}</div></div>
+      ${alerts.length ? `<span class="count bad">${alerts.length}</span>` : `<ha-icon class="ok-mark" icon="mdi:check-circle-outline"></ha-icon>`}</div>`;
   }
 }
 
@@ -1060,6 +1371,32 @@ class UahpetPurifierCard extends UahpetCard {
   }
 }
 
+
+/* ---------- compact air purifier ---------- */
+
+class UahpetPurifierMiniCard extends UahpetPurifierCard {
+  static getConfigElement() { return document.createElement("uahpet-purifier-mini-card-editor"); }
+  getCardSize() { return 1; }
+  getGridOptions() { return { columns: 6, min_columns: 4, rows: 1 }; }
+  body() {
+    const h = this._hass;
+    if (!this._map.fan) return `<div class="empty">${esc(t(h, "purifier_not_found"))}</div>`;
+    const fan = this._state("fan"), offline = isOff(fan), on = fan?.state === "on";
+    const pct = Number(fan?.attributes.percentage) || 0, mode = fan?.attributes.preset_mode;
+    const aq = this._state("air_quality"), filter = this._state("filter_utilization");
+    const tilted = mode === TILT_MODE;
+    const sub = offline ? t(h, "offline") : tilted ? t(h, "tilted") : [
+      on ? (mode ? t(h, `mode_${mode}`) : t(h, "on")) : t(h, "off"),
+      known(aq) ? t(h, `aq_${aq.state}`) : "",
+      known(filter) ? `${t(h, "filter")} ${Math.round(num(filter))} %` : "",
+    ].filter(Boolean).join(" · ");
+    return `<div class="mini"><button class="badge small ${tilted ? "bad" : on ? "busy" : offline ? "bad" : "idle"}" data-act="info" data-key="fan">
+        <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${(3.2 - 2.4 * (pct / 100)).toFixed(2)}s" icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon></button>
+      <div class="titles"><div class="title">${esc(this._config.title || this._deviceName(this._dev) || t(h, "c_purifier"))}</div><div class="sub ${tilted ? "bad-text" : ""}">${esc(sub)}</div></div>
+      <button class="power ${on ? "on" : ""}" data-act="power" aria-label="${esc(t(h, "power"))}" aria-pressed="${on}" ${offline ? "disabled" : ""}><ha-icon icon="mdi:power"></ha-icon></button></div>`;
+  }
+}
+
 /* ---------- styles ---------- */
 
 const STYLE = `<style>
@@ -1134,6 +1471,7 @@ const STYLE = `<style>
   .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .action { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 12px; text-align: center;
     background: color-mix(in srgb, var(--primary-color) 12%, transparent); color: var(--primary-color); font-weight: 500; }
+  .action.stop { background: var(--bad); color: var(--text-primary-color, #fff); }
   .toggle { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 18px;
     border: 1px solid var(--divider-color); color: var(--muted); }
   .toggle ha-icon { --mdc-icon-size: 18px; }
@@ -1157,6 +1495,8 @@ const STYLE = `<style>
   .dlg-b { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
   .btn { padding: 8px 14px; border-radius: 18px; color: var(--primary-color); font-weight: 500; }
   .btn.primary { background: var(--primary-color); color: var(--text-primary-color, #fff); }
+  .dlg.danger .btn.primary { background: var(--bad); }
+  .dlg-i { color: var(--bad); --mdc-icon-size: 28px; display: block; margin-bottom: 6px; }
   .btn.small { padding: 4px 12px; margin-top: 6px; font-size: .9em; }
 
   /* timeline */
@@ -1199,7 +1539,8 @@ const STYLE = `<style>
   .switch span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .2s; }
   .switch.on { background: var(--primary-color); } .switch.on span { transform: translateX(18px); }
   .stepper { display: flex; align-items: center; gap: 4px; flex: none; }
-  .stepper button { width: 32px; height: 32px; border-radius: 50%; background: var(--soft); font-size: 1.2em; line-height: 1; }
+  .stepper button { width: 32px; height: 32px; border-radius: 50%; background: var(--soft); display: grid; place-items: center; padding: 0; }
+  .stepper button ha-icon { --mdc-icon-size: 18px; display: flex; }
   .stepper .val { min-width: 4.5em; text-align: center; }
   .seg { display: flex; border: 1px solid var(--divider-color); border-radius: 12px; overflow: hidden; }
   .seg button { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; color: var(--muted); }
@@ -1235,12 +1576,52 @@ const STYLE = `<style>
   .round, .power { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none;
     background: color-mix(in srgb, var(--primary-color) 14%, transparent); color: var(--primary-color); }
   .power { background: none; border: 1px solid var(--divider-color); color: var(--muted); }
+  .round.stop { background: var(--bad); color: var(--text-primary-color, #fff); }
   .power.on { background: var(--primary-color); border-color: transparent; color: var(--text-primary-color, #fff); }
   .alert { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: .9em;
     background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
   .alert ha-icon { --mdc-icon-size: 18px; }
   .group { display: flex; flex-direction: column; gap: 6px; }
   .glabel { font-size: .8em; color: var(--muted); }
+
+  /* cats */
+  .cat-grid { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 10px; }
+  .cat-tile { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; background: var(--soft); min-width: 0; }
+  .cat-tile.big { background: none; padding: 0; }
+  .cat-tile.sick { background: color-mix(in srgb, var(--bad) 10%, transparent); }
+  .avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; display: grid; place-items: center;
+    background: var(--card-background-color, #fff); color: var(--primary-color); }
+  .cat-tile.big .avatar { width: 72px; height: 72px; background: var(--soft); }
+  .avatar ha-icon { --mdc-icon-size: 28px; }
+  .cat-body { display: flex; flex-direction: column; min-width: 0; }
+  .cat-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-kg { font-size: 1.3em; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .cat-tile.big .cat-kg { font-size: 1.6em; }
+  .cat-alert { display: flex; align-items: center; gap: 4px; color: var(--bad); font-size: .85em; margin-top: 2px; }
+  .cat-alert ha-icon { --mdc-icon-size: 16px; flex: none; }
+  .tbl { overflow-x: auto; } .tbl.scroll { max-height: 420px; overflow-y: auto; }
+  .tbl table { width: 100%; border-collapse: collapse; }
+  .tbl th { text-align: left; font-weight: 500; color: var(--muted); font-size: .85em; padding: 4px 6px; }
+  .tbl td { padding: 7px 6px; border-top: 1px solid var(--divider-color); vertical-align: top; }
+  .tbl .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .tbl .when { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .unk { color: var(--muted); } .why { display: block; font-size: .8em; color: var(--muted); }
+  .foot { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .link { display: inline-flex; align-items: center; gap: 4px; color: var(--primary-color); font-size: .9em; }
+  .link ha-icon { --mdc-icon-size: 18px; }
+  .gchart { width: 100%; display: block; overflow: visible; }
+  .gchart text { fill: var(--muted); font-size: 10px; text-anchor: middle; }
+  .gchart text.max { text-anchor: start; } .gchart text.x.today { fill: var(--primary-text-color); font-weight: 600; }
+  .gchart text.v { font-size: 9px; fill: var(--primary-text-color); }
+  .gchart .axis { stroke: var(--divider-color); }
+  .gchart .hit { fill: transparent; cursor: pointer; } .gchart .hit.picked { fill: var(--soft); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; }
+  .leg { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 16px; background: var(--soft); font-size: .9em; }
+  .leg.off { opacity: .45; } .leg .dot { width: 10px; height: 10px; border-radius: 50%; } .leg .sub { font-size: .9em; }
+  .count { min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; display: grid; place-items: center; font-weight: 600;
+    background: var(--bad); color: var(--text-primary-color, #fff); flex: none; }
+  .ok-mark { color: var(--ok); flex: none; }
+  .bad-text { color: var(--bad); }
   @media (max-width: 420px) { .art { width: 104px; } .stats.three { grid-template-columns: 1fr 1fr; } }
 </style>`;
 
@@ -1266,6 +1647,25 @@ define("uahpet-litterbox-maintenance-card", UahpetLitterboxMaintenanceCard);
 define("uahpet-litterbox-maintenance-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD]));
 define("uahpet-litterbox-mini-card", UahpetLitterboxMiniCard);
 define("uahpet-litterbox-mini-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD]));
+const catNames = (hass, config) => catSource(hass, config?.device_id || litterDevices(hass)[0])?.cats.map((c) => c.name) || [];
+define("uahpet-cats-card", UahpetCatsCard);
+define("uahpet-cats-card-editor", makeEditor((h, c) => [DEVICE_FIELD, TITLE_FIELD,
+  { name: "cats", selector: { select: { multiple: true, mode: "list", options: catNames(h, c) } } },
+  { name: "columns", selector: { number: { min: 1, max: 4, mode: "box" } } }, bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatsCard)));
+define("uahpet-cat-card", UahpetCatCard);
+define("uahpet-cat-card-editor", makeEditor((h, c) => [DEVICE_FIELD,
+  { name: "cat", selector: { select: { mode: "dropdown", options: catNames(h, c) } } }, bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatCard)));
+define("uahpet-visits-card", UahpetVisitsCard);
+define("uahpet-visits-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD,
+  { name: "count", selector: { number: { min: 1, max: 50, mode: "box" } } }, bool("collapsible"),
+  { name: "expanded_count", selector: { number: { min: 5, max: 500, mode: "box" } } },
+  bool("show_weight"), bool("show_duration"), bool("show_unidentified")], D(UahpetVisitsCard)));
+define("uahpet-visits-chart-card", UahpetVisitsChartCard);
+define("uahpet-visits-chart-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, choice(h, "days", [7, 30]), bool("show_unidentified")], D(UahpetVisitsChartCard)));
+define("uahpet-litterbox-maintenance-mini-card", UahpetMaintenanceMiniCard);
+define("uahpet-litterbox-maintenance-mini-card-editor", makeEditor(() => [DEVICE_FIELD]));
+define("uahpet-purifier-mini-card", UahpetPurifierMiniCard);
+define("uahpet-purifier-mini-card-editor", makeEditor(() => [PURIFIER_DEVICE_FIELD, TITLE_FIELD]));
 define("uahpet-purifier-card", UahpetPurifierCard);
 define("uahpet-purifier-card-editor", makeEditor(() => [PURIFIER_DEVICE_FIELD, TITLE_FIELD, bool("show_modes"), bool("show_speed"), bool("show_timer"), bool("show_extras")], D(UahpetPurifierCard)));
 
@@ -1274,7 +1674,9 @@ const tl = (k) => t(document.querySelector("home-assistant")?.hass, k);
 for (const [type, name] of [
   ["uahpet-litterbox-card", "c_main"], ["uahpet-litterbox-timeline-card", "c_timeline"], ["uahpet-litterbox-stats-card", "c_stats"],
   ["uahpet-litterbox-settings-card", "c_settings"], ["uahpet-litterbox-maintenance-card", "c_maint"], ["uahpet-litterbox-mini-card", "c_mini"],
-  ["uahpet-purifier-card", "c_purifier"],
+  ["uahpet-litterbox-maintenance-mini-card", "c_maint_mini"],
+  ["uahpet-cats-card", "c_cats"], ["uahpet-cat-card", "c_cat"], ["uahpet-visits-card", "c_visits"], ["uahpet-visits-chart-card", "c_chart"],
+  ["uahpet-purifier-card", "c_purifier"], ["uahpet-purifier-mini-card", "c_purifier_mini"],
 ]) {
   if (!window.customCards.some((c) => c.type === type)) {
     window.customCards.push({ type, name: tl(name), description: tl(`${name}_d`), preview: true, documentationURL: DOCS });

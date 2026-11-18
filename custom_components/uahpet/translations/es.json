@@ -80,6 +80,9 @@
       },
       "empty": {
         "name": "Vaciar arena"
+      },
+      "stop": {
+        "name": "Detener"
       }
     },
     "number": {
@@ -176,6 +179,24 @@
       },
       "last_bin_emptied": {
         "name": "Último vaciado del cubo"
+      },
+      "cat_visits_today": {
+        "name": "Visitas de {cat} hoy"
+      },
+      "cat_last_visit": {
+        "name": "Última visita de {cat}"
+      },
+      "unidentified_today": {
+        "name": "Visitas sin identificar hoy"
+      },
+      "last_visit": {
+        "name": "Última visita",
+        "state": {
+          "unidentified": "Sin identificar"
+        }
+      },
+      "cat_learned_weight": {
+        "name": "Peso de {cat}"
       }
     },
     "switch": {
@@ -215,6 +236,68 @@
           }
         }
       }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Gatos",
+        "description": "Opcional: distingue a tus gatos por el peso, como la app UAHPET. No hace falta si usas Litter Cat Identifier.",
+        "menu_options": {
+          "add_cat": "Añadir un gato",
+          "edit_cat": "Editar un gato",
+          "remove_cat": "Quitar un gato",
+          "identification": "Ajustes de identificación"
+        }
+      },
+      "add_cat": {
+        "title": "Añadir un gato",
+        "description": "El peso es solo un punto de partida: se aprende en cada visita identificada.",
+        "data": {
+          "name": "Nombre",
+          "weight": "Peso aproximado",
+          "picture": "Foto (URL o ruta /local/…, opcional)",
+          "color": "Color (gráficas e icono, opcional)"
+        }
+      },
+      "edit_cat": {
+        "title": "Editar un gato",
+        "data": {
+          "name": "Gato"
+        }
+      },
+      "edit_cat_details": {
+        "title": "{cat}",
+        "description": "Cambiar el peso reinicia lo aprendido para {cat}.",
+        "data": {
+          "weight": "Peso aproximado",
+          "picture": "Foto (URL o ruta /local/…, opcional)",
+          "color": "Color (gráficas e icono, opcional)"
+        }
+      },
+      "remove_cat": {
+        "title": "Quitar un gato",
+        "data": {
+          "name": "Gato"
+        }
+      },
+      "identification": {
+        "title": "Ajustes de identificación",
+        "data": {
+          "tolerance": "Diferencia máxima con el peso de un gato",
+          "smoothing": "Ritmo de aprendizaje",
+          "min_weight": "Ignorar lecturas por debajo de"
+        },
+        "data_description": {
+          "tolerance": "Las visitas más alejadas que esto de todos los gatos se registran como no identificadas.",
+          "smoothing": "Cuánto mueve cada visita el peso aprendido (0 = nunca, 1 = salta a la última lectura).",
+          "min_weight": "Descarta lecturas con el arenero vacío y ruido."
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "El nombre no puede estar vacío.",
+      "duplicate_name": "Ese nombre ya está en uso."
     }
   }
 }

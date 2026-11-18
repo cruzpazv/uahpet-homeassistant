@@ -82,6 +82,20 @@ def _log_attrs(dps: dict[str, Any]) -> dict[str, Any]:
     return {"bytes": int_bytes(value), "hex": None if value is None else f"{int(value):08x}"}
 
 
+def _visit_reason(dps: dict[str, Any]) -> str | None:
+    if "stagnant" in active_bits(get(dps, DP.NOTIFICATION), NOTIFICATION_BITS):
+        return "stayed_too_long"
+    if get(dps, DP.WORK_STATUS) in ("cleaning", "clearing", "leveling"):
+        return "device_busy"
+    return None
+
+
+def _stop(dps: dict[str, Any]) -> tuple[int, bool] | None:
+    """Best effort: switch off the DP of the running task (the device may ignore it)."""
+    dp = {"cleaning": DP.START, "leveling": DP.LEVEL, "clearing": DP.EMPTY}.get(get(dps, DP.WORK_STATUS))
+    return (dp, False) if dp else None
+
+
 def _visit_data(dps: dict[str, Any]) -> dict[str, Any]:
     return {"weight": scaled(get(dps, DP.LAST_CAT_WEIGHT), 1), "duration": get(dps, DP.VISIT_DURATION)}
 
@@ -98,6 +112,7 @@ LITTERBOX = Profile(
     tracker_factory=LitterboxTracker,
     visit_data=_visit_data,
     visit_dps=(str(DP.LAST_CAT_WEIGHT), str(DP.VISIT_DURATION)),
+    visit_reason=_visit_reason,
     signature=frozenset({str(DP.CAT_WEIGHT), str(DP.VISITS_TODAY), str(DP.VISIT_DURATION), str(DP.WORK_STATUS)}),
     sensors=(
         UahpetSensorDescription(
@@ -212,6 +227,7 @@ LITTERBOX = Profile(
         UahpetButtonDescription(key="clean", dp=DP.START),
         UahpetButtonDescription(key="level", dp=DP.LEVEL),
         UahpetButtonDescription(key="empty", dp=DP.EMPTY),
+        UahpetButtonDescription(key="stop", dp=DP.START, press_fn=_stop),
     ),
     numbers=(
         UahpetNumberDescription(
