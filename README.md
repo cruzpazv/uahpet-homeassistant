@@ -181,7 +181,9 @@ Full example: [examples/dashboard.yaml](examples/dashboard.yaml).
 
 ## Cats
 
-UAHPET can tell your cats apart on its own, like the UAHPET app: **UAHPET → Configure**:
+UAHPET can tell your cats apart on its own, like the UAHPET app.
+
+**Where:** Settings → Devices & services → **UAHPET** → the **⚙** on the litter box's entry (the row with the entry name, not the device row with the pencil). It opens this menu:
 
 | Menu | What it does |
 |---|---|
