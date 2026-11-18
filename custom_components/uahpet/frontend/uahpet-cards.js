@@ -96,7 +96,7 @@ const I18N = {
     purifier_not_found: "No Tuya air purifier found. Set it up in the Tuya integration first.",
     // editors
     ed_device_id: "Device", ed_title: "Title", ed_show_actions: "Show actions", ed_show_quick: "Show quick toggles",
-    ed_show_art: "Show the litter box drawing", ed_art_style: "Drawing style", art_drum: "Drum (green dome)", art_cube: "Modern (steel box)", art_minimal: "Minimal (lines, theme colour)", art_cat: "Cat peeking out", ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
+    ed_show_art: "Show the litter box drawing", ed_art_style: "Drawing style", art_drum: "Drum (green dome)", art_logo: "Logo", art_cube: "Modern (steel box)", art_minimal: "Minimal (lines)", art_cat: "Cat peeking out", ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
     ed_max_items: "Maximum entries", ed_show_cleanings: "Show cleanings", ed_show_alerts: "Show alerts",
     ed_days: "Days", ed_metric: "Default chart", ed_show_modes: "Show modes", ed_show_speed: "Show speed",
     ed_show_timer: "Show timer", ed_show_extras: "Show child lock and filter reset",
@@ -188,7 +188,7 @@ const I18N = {
     speed_sleep: "Noche", timer_cancel: "No",
     purifier_not_found: "No hay ningún purificador Tuya. Añádelo antes a la integración de Tuya.",
     ed_device_id: "Dispositivo", ed_title: "Título", ed_show_actions: "Mostrar acciones", ed_show_quick: "Mostrar interruptores rápidos",
-    ed_show_art: "Mostrar el dibujo del arenero", ed_art_style: "Estilo del dibujo", art_drum: "Tambor (cúpula verde)", art_cube: "Moderno (caja de acero)", art_minimal: "Minimalista (líneas, color del tema)", art_cat: "Gato asomando", ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
+    ed_show_art: "Mostrar el dibujo del arenero", ed_art_style: "Estilo del dibujo", art_drum: "Tambor (cúpula verde)", art_logo: "Logo", art_cube: "Moderno (caja de acero)", art_minimal: "Minimalista (líneas)", art_cat: "Gato asomando", ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
     ed_max_items: "Máximo de entradas", ed_show_cleanings: "Mostrar limpiezas", ed_show_alerts: "Mostrar avisos",
     ed_days: "Días", ed_metric: "Gráfica inicial", ed_show_modes: "Mostrar modos", ed_show_speed: "Mostrar velocidad",
     ed_show_timer: "Mostrar temporizador", ed_show_extras: "Mostrar bloqueo y reinicio del filtro",
@@ -505,7 +505,7 @@ class LitterCard extends UahpetCard {
 const BUSY = ["cleaning", "clearing", "leveling"];
 
 /** Drum litter box drawn in SVG; CSS animates it per status (class on the wrapper). */
-const ART_STYLES = ["drum", "cube", "minimal", "cat"];
+const ART_STYLES = ["drum", "logo", "cube", "minimal", "cat"];
 
 /** The opening of the litter box: rim, drum (turns while cleaning), litter (waves while levelling), grains. */
 function artOpening(cx, cy, R, r, rimClass = "rim") {
@@ -537,6 +537,33 @@ function boxArt(status, binState, style = "drum") {
       ${artOpening(100, 74, 40, 33, "rim steel-rim")}
       <rect class="base" x="42" y="122" width="116" height="14" rx="7"/>
       ${ART_CAT(8, -14)}`;
+  } else if (style === "logo") {
+    // the integration's logo (assets/icon.svg), drawn in its own 512-unit space
+    const fit = 'style="transform-box:fill-box;transform-origin:center"';
+    shape = `<defs><clipPath id="hole"><circle cx="256" cy="262" r="112"/></clipPath><clipPath id="lg-dome"><rect width="512" height="400"/></clipPath>
+        <linearGradient id="lg-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5cc3a2"/><stop offset="1" stop-color="#2c8a6f"/></linearGradient>
+        <linearGradient id="lg-base" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a6b5a"/><stop offset="1" stop-color="#1d4f42"/></linearGradient>
+        <linearGradient id="lg-litter" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d6a0"/><stop offset="1" stop-color="#d9b06a"/></linearGradient></defs>
+      <g transform="translate(5 -20) scale(0.37)">
+        <g class="pulse"><circle cx="256" cy="262" r="200" stroke-width="5" ${fit}/><circle cx="256" cy="262" r="200" stroke-width="5" ${fit}/></g>
+        <circle cx="256" cy="268" r="200" fill="url(#lg-body)" clip-path="url(#lg-dome)"/>
+        <rect class="base" x="44" y="372" width="424" height="76" rx="34" fill="url(#lg-base)"/>
+        <circle class="led" cx="256" cy="410" r="9"/>
+        <circle class="rim" cx="256" cy="262" r="126" fill="#eaf4f0"/>
+        <circle class="hole" cx="256" cy="262" r="112" fill="#143a31"/>
+        <g clip-path="url(#hole)">
+          <g class="drum" ${fit}><circle cx="256" cy="262" r="96" stroke-width="8"/></g>
+          <g class="peek">
+            <path class="peek-head" d="M184 330 C178 290 186 250 198 214 L240 250 Q256 246 272 250 L314 214 C326 250 334 290 328 330 Z"/>
+            <path class="peek-ear" d="M205 232 L222 248 L208 252 Z M307 232 L290 248 L304 252 Z"/>
+            <ellipse class="peek-eye" cx="231" cy="284" rx="10" ry="13"/><ellipse class="peek-eye" cx="281" cy="284" rx="10" ry="13"/>
+            <path class="peek-nose" d="M250 302 L262 302 L256 309 Z"/>
+          </g>
+          <path d="M130 330 Q190 306 256 318 Q322 306 382 330 L382 380 L130 380 Z" fill="url(#lg-litter)"/>
+          <g class="grains"><circle cx="240" cy="300" r="7"/><circle cx="262" cy="288" r="6"/><circle cx="276" cy="304" r="7"/></g>
+        </g>
+      </g>
+      ${ART_CAT(6, -18)}`;
   } else if (style === "cat") {
     shape = `<defs><clipPath id="hole"><circle cx="100" cy="88" r="36"/></clipPath></defs>
       ${ART_PULSE(100, 88)}
@@ -1812,12 +1839,17 @@ const STYLE = `<style>
   .peek-head { fill: #f7f1e7; } .peek-ear { fill: #f3b8b0; } .peek-eye { fill: var(--box-hole); } .peek-nose { fill: #e58f86; }
   .peek { transition: opacity .3s; } .art.s-cleaning .peek, .art.s-clearing .peek, .art.s-leveling .peek { opacity: 0; }
   .v-cat .drum circle { stroke: rgba(255,255,255,.18); }
-  .v-minimal .dome, .v-minimal .base, .v-minimal .rim { fill: none; stroke: var(--primary-color); stroke-width: 3; }
-  .v-minimal .hole { fill: color-mix(in srgb, var(--primary-color) 10%, transparent); }
-  .v-minimal .litter { fill: color-mix(in srgb, var(--primary-color) 32%, transparent); }
-  .v-minimal .drum circle { stroke: var(--primary-color); opacity: .55; }
-  .v-minimal .led { fill: var(--primary-color); } .v-minimal .cat path { fill: var(--primary-color); opacity: 1; }
-  .v-minimal .grains circle { fill: var(--primary-color); }
+  .v-minimal { --lg: #2c8a6f; --lg-soft: #5cc3a2; }
+  .v-minimal .dome { fill: color-mix(in srgb, var(--lg-soft) 16%, transparent); stroke: var(--lg); stroke-width: 3; }
+  .v-minimal .base { fill: color-mix(in srgb, var(--lg) 12%, transparent); stroke: var(--lg); stroke-width: 3; }
+  .v-minimal .rim { fill: var(--card-background-color, #fff); stroke: var(--lg); stroke-width: 3; }
+  .v-minimal .hole { fill: color-mix(in srgb, var(--lg-soft) 14%, transparent); }
+  .v-minimal .litter { fill: color-mix(in srgb, var(--box-litter) 75%, transparent); }
+  .v-minimal .drum circle { stroke: var(--lg); opacity: .5; }
+  .v-minimal .led { fill: var(--lg-soft); } .v-minimal .cat path { fill: var(--lg); opacity: 1; }
+  .v-minimal .grains circle { fill: var(--box-litter); }
+  .v-logo .drum circle { stroke: rgba(255,255,255,.22); } .v-logo .pulse circle { stroke: var(--warn); }
+  .v-logo .grains circle { fill: var(--box-litter); }
   .art.v-minimal.bin-full .base { fill: none; stroke: var(--bad); }
   .grains circle { fill: var(--box-litter); opacity: 0; }
   .cat path { fill: var(--primary-text-color); opacity: .75; } .cat .eye { fill: var(--card-background-color, #fff); }
