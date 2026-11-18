@@ -24,7 +24,7 @@ Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, b
 <td><img src="docs/images/main-busy.png" alt="Main card while cleaning" width="380"><br>While a task runs, its button becomes <b>Stop</b></td></tr>
 <tr><td><img src="docs/images/dialog.png" alt="Empty confirmation" width="380"><br><b>Empty</b> asks for confirmation first</td>
 <td><img src="docs/images/main-radar.png" alt="Main card, cat nearby" width="380"><br>A cat nearby: operation paused</td></tr>
-<tr><td colspan="2"><img src="docs/images/art-styles.png" alt="The drawing styles of the main card" width="760"><br>Drawing styles of the main card: <code>art_style: drum | logo | cube | minimal | cat</code></td></tr>
+<tr><td colspan="2"><img src="docs/images/art-styles.png" alt="The drawing models of the main card, full colour and minimalist" width="760"><br>Main card drawing: <code>art_style: drum | circle | cube</code>, each also as <code>art_minimal: true</code>. When a cat is inside, it peeks out of the opening in the colour you pick (<code>cat_color</code>)</td></tr>
 <tr><td><img src="docs/images/cats.png" alt="Cats card" width="380"><br><b>Cats</b>: weight, visits today, last visit (each cat in its own colour)<br><br><img src="docs/images/cat.png" alt="Cat card" width="380"><br><b>Cat</b>: one cat</td>
 <td><img src="docs/images/visits-chart.png" alt="Visits per day card" width="380"><br><b>Visits per day</b>: one bar per cat</td></tr>
 <tr><td><img src="docs/images/weight-chart.png" alt="Weight per cat card" width="380"><br><b>Weight</b>: one line per cat, 7 / 30 / 90 days</td>
@@ -132,7 +132,7 @@ The cards load automatically with the integration and follow the UAHPET app. Add
 
 | Card | What it shows |
 |---|---|
-| `custom:uahpet-litterbox-card` | Animated drawing of the litter box (drum turns while cleaning, litter waves while levelling, cat and radar pulse when a cat is nearby), status in the app's words, **auto clean countdown**, bin / litter / alert chips, today's visits, cleanings and last cat, a row with each cat, Clean / Level / Empty (Level and Empty ask for confirmation; while a task runs its button becomes **Stop**), quick toggles for auto clean and Do not disturb. `art_style`: `drum` (green dome), `logo` (the integration's logo), `cube` (steel box), `minimal` (green lines) or `cat` (a cat peeking out); `show_art: false` hides the drawing |
+| `custom:uahpet-litterbox-card` | Animated drawing of the litter box (drum turns while cleaning, litter waves while levelling, cat and radar pulse when a cat is nearby), status in the app's words, **auto clean countdown**, bin / litter / alert chips, today's visits, cleanings and last cat, a row with each cat, Clean / Level / Empty (Level and Empty ask for confirmation; while a task runs its button becomes **Stop**), quick toggles for auto clean and Do not disturb. `art_style`: `drum` (green dome), `circle` (the integration's logo) or `cube` (steel box); `art_minimal: true` draws it with lines; a cat peeks out of the opening while one is inside, in `cat_color` (e.g. `"#e9964a"`); `show_art: false` hides the drawing |
 | `custom:uahpet-litterbox-timeline-card` | Today's (or last 24 h) visits with duration and weight, cleanings, emptying, levelling, bin emptied and alerts. The short turn right after a visit is shown as *Waste buried*, not as a cleaning (`show_burying: false` hides it). With [Litter Cat Identifier](https://github.com/cruzpazv/litter-cat-identifier) each visit shows the cat's name |
 | `custom:uahpet-litterbox-stats-card` | Visits, cleanings, visit duration and weight per day, 7 or 30 days. Tap a day for its value |
 | `custom:uahpet-litterbox-settings-card` | Cleaning (auto clean, clean delay with quick presets, bury delay), litter type, Do not disturb, radar, child lock, ionizer, visits alert and unit, each with the app's explanation. `show_advanced: true` adds manual motor control and developer mode |
@@ -146,7 +146,9 @@ The cards load automatically with the integration and follow the UAHPET app. Add
 
 ```yaml
 type: custom:uahpet-litterbox-card
-art_style: logo           # drum, logo, cube, minimal, cat
+art_style: circle         # drum, circle, cube
+art_minimal: false
+cat_color: "#e9964a"      # the cat peeking out while one is inside
 show_stats: true
 show_actions: true
 show_quick: true
