@@ -97,6 +97,7 @@ LITTERBOX = Profile(
     product_ids=("y0kvbmrnprybewtd",),
     tracker_factory=LitterboxTracker,
     visit_data=_visit_data,
+    visit_dps=(str(DP.LAST_CAT_WEIGHT), str(DP.VISIT_DURATION)),
     signature=frozenset({str(DP.CAT_WEIGHT), str(DP.VISITS_TODAY), str(DP.VISIT_DURATION), str(DP.WORK_STATUS)}),
     sensors=(
         UahpetSensorDescription(

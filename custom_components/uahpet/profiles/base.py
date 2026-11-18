@@ -33,6 +33,7 @@ class Profile:
     # Derived values (see tracker.py) and the visit event, when the device has them.
     tracker_factory: Callable[[], Any] | None = None
     visit_data: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+    visit_dps: tuple[str, ...] = ()  # DPs a visit waits for before its event fires
 
     def matches(self, dps: dict[str, Any]) -> bool:
         return self.signature <= set(dps)

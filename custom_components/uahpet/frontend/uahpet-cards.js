@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.2.0";
+const VERSION = "0.2.1";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 
 /* ---------- texts ---------- */

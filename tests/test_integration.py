@@ -135,3 +135,33 @@ async def test_derived_sensors_and_visit_event(hass: HomeAssistant, fake_client)
     client.on_dps({"113": "bin_normal"})
     await hass.async_block_till_done()
     assert st("sensor", "last_bin_emptied").state not in ("unknown", "unavailable")
+
+
+async def test_visit_waits_for_late_weight(hass: HomeAssistant, fake_client) -> None:
+    """The counter can arrive before the visit weight: the event must carry the new weight, not the old one."""
+    await _setup(hass)
+    client = fake_client.instances[0]
+    client.on_dps({"7": 9})  # counter first
+    await hass.async_block_till_done()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=10))
+    await hass.async_block_till_done()
+    assert hass.states.get(_eid(hass, "event", "visit")).state == "unknown"  # still waiting
+
+    client.on_dps({"106": 52})
+    client.on_dps({"8": 30})
+    await hass.async_block_till_done()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=12))
+    await hass.async_block_till_done()
+    visit = hass.states.get(_eid(hass, "event", "visit"))
+    assert visit.attributes["weight"] == 5.2 and visit.attributes["duration"] == 30
+
+
+async def test_visit_timeout_without_new_values(hass: HomeAssistant, fake_client) -> None:
+    """Same cat, same weight: the device may not re-send it. The event still fires after the timeout."""
+    await _setup(hass)
+    client = fake_client.instances[0]
+    client.on_dps({"7": 9})
+    await hass.async_block_till_done()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=61))
+    await hass.async_block_till_done()
+    assert hass.states.get(_eid(hass, "event", "visit")).attributes["weight"] == 6.1
