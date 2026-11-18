@@ -15,6 +15,19 @@
 
 Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, but the official Tuya integration only shows their standard data points. This package talks to them **locally** and exposes everything the UAHPET app can do, plus dashboard cards.
 
+## Card previews
+
+<table>
+<tr><td><img src="docs/images/main.png" alt="Main card" width="380"><br><b>Main</b>: animated litter box, auto clean countdown, today's numbers, cats from Litter Cat Identifier, actions</td>
+<td><img src="docs/images/main-radar.png" alt="Main card, cat nearby" width="380"><br><b>Main</b> while a cat is near: operation paused</td></tr>
+<tr><td><img src="docs/images/timeline.png" alt="Timeline card" width="380"><br><b>Timeline</b>: visits with the cat's name, cleanings, emptying, alerts</td>
+<td><img src="docs/images/stats.png" alt="Statistics card" width="380"><br><b>Statistics</b>: visits, cleanings, duration and weight per day<br><br><img src="docs/images/mini.png" alt="Compact card" width="380"><br><b>Compact</b>: one row</td></tr>
+<tr><td><img src="docs/images/settings.png" alt="Settings card" width="380"><br><b>Settings</b>, with the app's explanations</td>
+<td><img src="docs/images/maintenance.png" alt="Maintenance card" width="380"><br><b>Maintenance</b>: waste bin and how to fix each alert<br><br><img src="docs/images/purifier.png" alt="Air purifier card" width="380"><br><b>Air purifier</b> (Tuya integration entities)</td></tr>
+</table>
+
+Rendered from the real cards with sample data.
+
 ## Supported devices
 
 | Device | Tuya category / product | How | What you get |
@@ -128,7 +141,12 @@ Full example: [examples/dashboard.yaml](examples/dashboard.yaml).
 
 ## Telling cats apart
 
-This integration only talks to the device. To name each visit after the right cat, add [Litter Cat Identifier](https://github.com/cruzpazv/litter-cat-identifier) with *Last cat weight* as the weight sensor and *Visits today* as the visit counter.
+This integration only talks to the device. To name each visit after the right cat, add [Litter Cat Identifier](https://github.com/cruzpazv/litter-cat-identifier): it recognises the UAHPET litter box and fills in the *Visit* event, *Last cat weight* and *Last visit duration* by itself.
+
+With both installed:
+- the main card shows each cat (photo, visits today, a ❤ when a health alert is on) and names the last cat;
+- the timeline names the cat of every visit, using Litter Cat Identifier's whole history;
+- Litter Cat Identifier explains unidentified readings with the litter box's state (it was levelling or emptying, or a cat stayed too long).
 
 ## Adding a device
 

@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.2.1";
+const VERSION = "0.3.0";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 
 /* ---------- texts ---------- */
@@ -12,7 +12,7 @@ const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", cancel: "Cancel", confirm_btn: "Continue",
     auto_clean: "Auto clean", sleep_mode: "Do not disturb", child_lock: "Child lock", ionizer: "Ionizer", radar: "Radar",
-    last_cat_weight: "Last cat", visits_today: "Visits today", cleanings_today: "Cleanings today", last_visit_duration: "Last visit",
+    last_cat_weight: "Last cat", visits_today: "Visits today", cleanings_today: "Cleanings", last_visit_duration: "Last visit",
     offline: "Offline", not_found: "No UAHPET litter box found. Add the UAHPET integration first.",
     st_standby: "Ready", st_cleaning: "Cleaning the litter, please wait", st_clearing: "Emptying the litter, please wait",
     st_leveling: "Levelling the litter, please wait", st_radar: "Cat nearby, operation paused",
@@ -32,7 +32,7 @@ const I18N = {
     stats: "Statistics", m_visits: "Visits", m_cleanings: "Cleanings", m_duration: "Duration", m_weight: "Weight",
     per_day: "{v}/day", total: "total {v}", average: "average {v}", no_data: "No data yet.", days_n: "{n} days",
     // settings
-    settings: "Litter box settings", sec_clean: "Cleaning", sec_litter: "Litter", sec_comfort: "Behaviour",
+    litter_type: "Litter type", settings: "Litter box settings", sec_clean: "Cleaning", sec_litter: "Litter", sec_comfort: "Behaviour",
     sec_alerts: "Alerts", sec_device: "Device", sec_advanced: "Advanced",
     clean_delay: "Clean delay", bury_delay: "Bury delay", excessive_visits: "Too many visits alert", weight_unit: "Unit on the device",
     h_auto_clean: "Cleans by itself after the cat leaves, once the delay has passed.",
@@ -65,7 +65,7 @@ const I18N = {
     purifier_not_found: "No Tuya air purifier found. Set it up in the Tuya integration first.",
     // editors
     ed_device_id: "Device", ed_title: "Title", ed_show_actions: "Show actions", ed_show_quick: "Show quick toggles",
-    ed_show_stats: "Show today's numbers", ed_show_advanced: "Show advanced settings", ed_range: "Period",
+    ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
     ed_max_items: "Maximum entries", ed_show_cleanings: "Show cleanings", ed_show_alerts: "Show alerts",
     ed_days: "Days", ed_metric: "Default chart", ed_show_modes: "Show modes", ed_show_speed: "Show speed",
     ed_show_timer: "Show timer", ed_show_extras: "Show child lock and filter reset",
@@ -81,7 +81,7 @@ const I18N = {
   es: {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", cancel: "Cancelar", confirm_btn: "Continuar",
     auto_clean: "Limpieza automática", sleep_mode: "No molestar", child_lock: "Bloqueo infantil", ionizer: "Ionizador", radar: "Radar",
-    last_cat_weight: "Último gato", visits_today: "Visitas hoy", cleanings_today: "Limpiezas hoy", last_visit_duration: "Última visita",
+    last_cat_weight: "Último gato", visits_today: "Visitas hoy", cleanings_today: "Limpiezas", last_visit_duration: "Última visita",
     offline: "Sin conexión", not_found: "No hay ningún arenero UAHPET. Añade antes la integración UAHPET.",
     st_standby: "Listo", st_cleaning: "Limpiando la arena, espera…", st_clearing: "Vaciando la arena, espera…",
     st_leveling: "Nivelando la arena, espera…", st_radar: "Gato cerca, en pausa",
@@ -98,7 +98,7 @@ const I18N = {
     no_events: "Nada todavía hoy.", loading: "Cargando…", yesterday: "Ayer", today_h: "Hoy",
     stats: "Estadísticas", m_visits: "Visitas", m_cleanings: "Limpiezas", m_duration: "Duración", m_weight: "Peso",
     per_day: "{v}/día", total: "total {v}", average: "media {v}", no_data: "Aún no hay datos.", days_n: "{n} días",
-    settings: "Ajustes del arenero", sec_clean: "Limpieza", sec_litter: "Arena", sec_comfort: "Comportamiento",
+    litter_type: "Tipo de arena", settings: "Ajustes del arenero", sec_clean: "Limpieza", sec_litter: "Arena", sec_comfort: "Comportamiento",
     sec_alerts: "Avisos", sec_device: "Aparato", sec_advanced: "Avanzado",
     clean_delay: "Retardo de limpieza", bury_delay: "Retardo de enterrado", excessive_visits: "Aviso de demasiadas visitas", weight_unit: "Unidad en el aparato",
     h_auto_clean: "Limpia sola cuando el gato sale, pasado el retardo.",
@@ -128,7 +128,7 @@ const I18N = {
     speed_sleep: "Noche", timer_cancel: "No",
     purifier_not_found: "No hay ningún purificador Tuya. Añádelo antes a la integración de Tuya.",
     ed_device_id: "Dispositivo", ed_title: "Título", ed_show_actions: "Mostrar acciones", ed_show_quick: "Mostrar interruptores rápidos",
-    ed_show_stats: "Mostrar cifras de hoy", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
+    ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
     ed_max_items: "Máximo de entradas", ed_show_cleanings: "Mostrar limpiezas", ed_show_alerts: "Mostrar avisos",
     ed_days: "Días", ed_metric: "Gráfica inicial", ed_show_modes: "Mostrar modos", ed_show_speed: "Mostrar velocidad",
     ed_show_timer: "Mostrar temporizador", ed_show_extras: "Mostrar bloqueo y reinicio del filtro",
@@ -204,6 +204,24 @@ function entityMap(hass, deviceId) {
 /** Litter Cat Identifier "last visit" sensor (its `history` attribute names the cat of each visit). */
 function catVisitsEntity(hass) {
   return Object.values(hass?.entities || {}).find((e) => e.platform === "litter_cat_identifier" && e.translation_key === "last_visit")?.entity_id;
+}
+
+/** Cats from Litter Cat Identifier: name, photo, visits today, health. */
+function lciCats(hass) {
+  const cats = {};
+  for (const e of Object.values(hass?.entities || {})) {
+    if (e.platform !== "litter_cat_identifier") continue;
+    const field = { cat_visits_today: "visits", cat_weight: "weight", cat_health: "health" }[e.translation_key];
+    const name = field && hass.states[e.entity_id]?.attributes?.cat;
+    if (name) (cats[name] ||= { name })[field] = e.entity_id;
+  }
+  return Object.values(cats);
+}
+
+/** Litter Cat Identifier device id (for its history websocket command). */
+function lciDevice(hass) {
+  const id = catVisitsEntity(hass);
+  return id ? hass.entities[id]?.device_id : null;
 }
 
 function purifierEntitiesByDevice(hass) {
@@ -413,13 +431,20 @@ const ALERT_ICONS = {
 };
 
 class UahpetLitterboxCard extends LitterCard {
-  static defaults = { show_stats: true, show_actions: true, show_quick: true };
+  static defaults = { show_stats: true, show_cats: true, show_actions: true, show_quick: true };
   static getConfigElement() { return document.createElement("uahpet-litterbox-card-editor"); }
+
+  extraKey() {
+    // re-render when a cat (Litter Cat Identifier) changes too
+    const ids = lciCats(this._hass).flatMap((c) => [c.visits, c.weight, c.health]).concat(catVisitsEntity(this._hass) || []);
+    return ids.map((id) => this._hass.states[id]?.last_updated).join("|");
+  }
   static getStubConfig(hass) { return { device_id: litterDevices(hass)[0] || "" }; }
 
-  handle(act, key) {
+  handle(act, key, val) {
     const h = this._hass;
-    if (act === "toggle") this._call("switch", "toggle", key);
+    if (act === "cat") fire(this, "hass-more-info", { entityId: val });
+    else if (act === "toggle") this._call("switch", "toggle", key);
     else if (act === "press" && key === "clean") this._call("button", "press", "clean");
     else if (act === "press" && key === "empty") this._ask(t(h, "dlg_empty_t"), t(h, "dlg_empty"), () => this._call("button", "press", "empty"));
     else if (act === "press" && key === "level") this._ask(t(h, "dlg_level_t"), t(h, "dlg_level"), () => this._call("button", "press", "level"));
@@ -464,6 +489,17 @@ class UahpetLitterboxCard extends LitterCard {
         <ha-icon icon="${icon}"></ha-icon><span class="val">${esc(this._fmt(key))}</span><span class="lbl">${esc(label)}</span></button>` : "";
     const dis = offline || busy ? "disabled" : "";
     const quick = [["auto_clean", "mdi:robot-vacuum"], ["sleep_mode", "mdi:bell-sleep-outline"]].filter(([k]) => map[k]);
+    const cats = c.show_cats ? lciCats(h) : [];
+    const lastCat = h.states[catVisitsEntity(h)]?.state;
+    const lastLabel = lastCat && cats.some((x) => x.name === lastCat) ? lastCat : t(h, "last_cat_weight");
+    const catRow = cats.map((cat) => {
+      const w = h.states[cat.weight], pic = w?.attributes?.entity_picture;
+      const sick = h.states[cat.health]?.state === "on";
+      return `<button class="cat-chip ${sick ? "sick" : ""}" data-act="cat" data-val="${esc(cat.weight || cat.visits)}">
+        ${pic ? `<img src="${esc(pic)}" alt="">` : `<span class="cat-ic"><ha-icon icon="mdi:cat"></ha-icon></span>`}
+        <span class="cat-n">${esc(cat.name)}</span><span class="cat-v">${esc(h.states[cat.visits]?.state ?? "0")}</span>
+        ${sick ? `<ha-icon class="cat-h" icon="mdi:heart-pulse"></ha-icon>` : ""}</button>`;
+    }).join("");
 
     return `
       <div class="hero">
@@ -478,8 +514,9 @@ class UahpetLitterboxCard extends LitterCard {
       ${c.show_stats ? `<div class="stats three">
         ${stat("visits_today", "mdi:paw", t(h, "visits_today"))}
         ${stat("cleanings_today", "mdi:broom", t(h, "cleanings_today"))}
-        ${stat("last_cat_weight", "mdi:cat", t(h, "last_cat_weight"))}
+        ${stat("last_cat_weight", "mdi:cat", lastLabel)}
       </div>` : ""}
+      ${catRow ? `<div class="cat-row">${catRow}</div>` : ""}
       ${c.show_actions ? `<div class="actions">
         ${[["clean", "mdi:broom"], ["level", "mdi:waves"], ["empty", "mdi:delete-empty"]].filter(([k]) => map[k]).map(([k, icon]) =>
           `<button class="action" data-act="press" data-key="${k}" ${dis}><ha-icon icon="${icon}"></ha-icon>${esc(t(h, k))}</button>`).join("")}
@@ -527,6 +564,14 @@ class UahpetLitterboxTimelineCard extends LitterCard {
           minimal_response: false, no_attributes: false, significant_changes_only: false,
         });
       } catch (e) { this._history = {}; }
+      // The cat sensor only carries the latest 20 visits; Litter Cat Identifier gives the rest.
+      const dev = lciDevice(this._hass);
+      if (dev) {
+        try {
+          const res = await this._hass.callWS({ type: "litter_cat_identifier/history", device_id: dev, limit: 300 });
+          this._catHistory = res.history || [];
+        } catch (e) { this._catHistory = null; }
+      }
       this._version = (this._version || 0) + 1;
       this._key = null;
       this._render();
@@ -536,7 +581,7 @@ class UahpetLitterboxTimelineCard extends LitterCard {
   _events() {
     const h = this._hass, hist = this._history || {}, m = this._map, start = this._start().getTime();
     const items = [];
-    const cats = (this._hass.states[catVisitsEntity(h)]?.attributes?.history || []).map((v) => ({ ...v, ts: Date.parse(v.time) }));
+    const cats = (this._catHistory || this._hass.states[catVisitsEntity(h)]?.attributes?.history || []).map((v) => ({ ...v, ts: Date.parse(v.time) }));
     // visits
     let attrs = {};
     for (const row of hist[m.visit] || []) {
@@ -809,7 +854,7 @@ class UahpetLitterboxSettingsCard extends LitterCard {
         this._switch("auto_clean", t(h, "auto_clean"), t(h, "h_auto_clean")) +
         this._stepper("clean_delay", t(h, "clean_delay"), t(h, "h_clean_delay"), 30, fmtDur) + presets +
         this._stepper("bury_delay", t(h, "bury_delay"), t(h, "h_bury_delay"), 5, fmtDur))}
-      ${sec(t(h, "sec_litter"), this._segment("litter_type", t(h, "sec_litter"), t(h, "h_litter"), (o) => t(h, `lt_${o}`)))}
+      ${sec(t(h, "sec_litter"), this._segment("litter_type", t(h, "litter_type"), t(h, "h_litter"), (o) => t(h, `lt_${o}`)))}
       ${sec(t(h, "sec_comfort"),
         this._switch("sleep_mode", t(h, "sleep_mode"), t(h, "h_dnd")) +
         this._switch("radar", t(h, "radar"), t(h, "h_radar")) +
@@ -1095,6 +1140,15 @@ const STYLE = `<style>
   .toggle.on { background: color-mix(in srgb, var(--primary-color) 15%, transparent); border-color: transparent; color: var(--primary-color); }
   .toggle.armed { background: var(--bad); border-color: transparent; color: var(--text-primary-color, #fff); }
 
+  .cat-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cat-chip { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 22px; background: var(--soft); }
+  .cat-chip img, .cat-ic { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; display: grid; place-items: center;
+    background: var(--card-background-color, #fff); color: var(--primary-color); }
+  .cat-ic ha-icon { --mdc-icon-size: 20px; }
+  .cat-n { font-weight: 500; } .cat-v { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cat-h { --mdc-icon-size: 18px; color: var(--bad); }
+  .cat-chip.sick { background: color-mix(in srgb, var(--bad) 12%, transparent); }
+
   /* dialog */
   .dlg-back { position: absolute; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 16px; z-index: 2; }
   .dlg { background: var(--card-background-color, #fff); border-radius: 16px; padding: 18px; max-width: 320px; box-shadow: 0 6px 24px rgba(0,0,0,.3); }
@@ -1108,11 +1162,11 @@ const STYLE = `<style>
   /* timeline */
   .summary { margin-top: -8px; }
   .timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .timeline li { display: grid; grid-template-columns: 3.2em 28px 1fr auto; align-items: center; gap: 8px; padding: 6px 0; position: relative; }
-  .timeline li:not(.day)::before { content: ""; position: absolute; left: calc(3.2em + 8px + 13px); top: 0; bottom: 0; width: 2px; background: var(--divider-color); }
+  .timeline li { display: grid; grid-template-columns: 5.2em 28px 1fr auto; align-items: center; gap: 8px; padding: 6px 0; position: relative; }
+  .timeline li:not(.day)::before { content: ""; position: absolute; left: calc(5.2em + 8px + 13px); top: 0; bottom: 0; width: 2px; background: var(--divider-color); }
   .timeline li:first-child::before { top: 50%; } .timeline li:last-child::before { bottom: 50%; }
   .timeline li.day { display: block; font-size: .8em; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-top: 10px; }
-  .tl-time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9em; }
+  .tl-time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9em; white-space: nowrap; }
   .tl-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; z-index: 1;
     background: var(--card-background-color, #fff); border: 2px solid var(--divider-color); }
   .tl-dot ha-icon { --mdc-icon-size: 16px; }
@@ -1195,7 +1249,7 @@ const STYLE = `<style>
 const define = (name, cls) => { if (!customElements.get(name)) customElements.define(name, cls); };
 const D = (cls) => cls.defaults;
 define("uahpet-litterbox-card", UahpetLitterboxCard);
-define("uahpet-litterbox-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD, bool("show_stats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
+define("uahpet-litterbox-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD, bool("show_stats"), bool("show_cats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
 define("uahpet-litterbox-timeline-card", UahpetLitterboxTimelineCard);
 define("uahpet-litterbox-timeline-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD,
   choice(h, "range", ["today", "24h"], (v) => (v === "today" ? "timeline" : "last24")),
