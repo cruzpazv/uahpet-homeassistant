@@ -29,6 +29,32 @@
           "host": "Déjalo vacío para buscarlo en la red.",
           "protocol_version": "Automático prueba 3.5, 3.4 y 3.3."
         }
+      },
+      "cats": {
+        "title": "Gatos",
+        "description": "¿Quieres que UAHPET distinga a tus gatos por el peso, como la app UAHPET? También puedes hacerlo luego en ⚙ Configurar.",
+        "menu_options": {
+          "setup_add_cat": "Añadir gatos ahora",
+          "setup_import_lci": "Importarlos desde Litter Cat Identifier",
+          "setup_done": "Ahora no"
+        }
+      },
+      "setup_add_cat": {
+        "title": "Gato {count}",
+        "description": "El peso es solo un punto de partida: se aprende en cada visita. Foto, avisos y más en ⚙ Configurar.",
+        "data": {
+          "name": "Nombre",
+          "weight": "Peso aproximado",
+          "color": "Color (opcional)",
+          "add_another": "Añadir otro gato después de este"
+        }
+      },
+      "setup_import_lci": {
+        "title": "Importar desde Litter Cat Identifier",
+        "description": "Copia los gatos, pesos aprendidos, fotos, colores, avisos, ajustes y todo el historial de visitas.",
+        "data": {
+          "lci_entry": "Arenero en Litter Cat Identifier"
+        }
       }
     },
     "error": {
@@ -37,7 +63,9 @@
       "invalid_auth": "Clave local o versión del protocolo incorrectas.",
       "not_supported": "Este aparato aún no está soportado. Soportado: arenero autolimpiable UAHPET. El registro muestra sus DP: abre una incidencia con ellos.",
       "unknown": "Error inesperado, revisa el registro.",
-      "wrong_device": "Ese ID responde como otro tipo de aparato UAHPET."
+      "wrong_device": "Ese ID responde como otro tipo de aparato UAHPET.",
+      "invalid_name": "El nombre no puede estar vacío.",
+      "duplicate_name": "Ese nombre ya está en uso."
     },
     "abort": {
       "already_configured": "Este aparato ya está configurado.",
@@ -399,6 +427,32 @@
         "config_entry_id": {
           "name": "Arenero",
           "description": "Solo hace falta con más de un arenero UAHPET con gatos."
+        }
+      }
+    },
+    "add_cat": {
+      "name": "Añadir gato",
+      "description": "Añade un perfil de gato a un arenero UAHPET (se recarga con el gato nuevo).",
+      "fields": {
+        "name": {
+          "name": "Nombre",
+          "description": "Nombre del gato."
+        },
+        "weight": {
+          "name": "Peso",
+          "description": "Peso aproximado en kg (se aprende en cada visita)."
+        },
+        "color": {
+          "name": "Color",
+          "description": "Opcional, p. ej. #e15759."
+        },
+        "picture": {
+          "name": "Foto",
+          "description": "URL o ruta /local/… opcional."
+        },
+        "config_entry_id": {
+          "name": "Arenero",
+          "description": "Solo hace falta con más de un arenero UAHPET."
         }
       }
     }

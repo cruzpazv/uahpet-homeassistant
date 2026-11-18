@@ -29,6 +29,32 @@
           "host": "Leave empty to find it on the network.",
           "protocol_version": "Auto tries 3.5, 3.4 and 3.3."
         }
+      },
+      "cats": {
+        "title": "Cats",
+        "description": "Want UAHPET to tell your cats apart by weight, like the UAHPET app? You can also do it later in ⚙ Configure.",
+        "menu_options": {
+          "setup_add_cat": "Add cats now",
+          "setup_import_lci": "Import them from Litter Cat Identifier",
+          "setup_done": "Not now"
+        }
+      },
+      "setup_add_cat": {
+        "title": "Cat {count}",
+        "description": "The weight is only a starting point: it is learned on every visit. Photo, notifications and more in ⚙ Configure.",
+        "data": {
+          "name": "Name",
+          "weight": "Approximate weight",
+          "color": "Colour (optional)",
+          "add_another": "Add another cat after this one"
+        }
+      },
+      "setup_import_lci": {
+        "title": "Import from Litter Cat Identifier",
+        "description": "Copies the cats, learned weights, photos, colours, notifications, settings and the whole visit history.",
+        "data": {
+          "lci_entry": "Litter box in Litter Cat Identifier"
+        }
       }
     },
     "error": {
@@ -37,7 +63,9 @@
       "invalid_auth": "Wrong local key or protocol version.",
       "not_supported": "This device is not supported yet. Supported: UAHPET self-cleaning litter box. The log lists its DPs: please open an issue with them.",
       "unknown": "Unexpected error, see the logs.",
-      "wrong_device": "That ID answers as a different kind of UAHPET device."
+      "wrong_device": "That ID answers as a different kind of UAHPET device.",
+      "invalid_name": "Name cannot be empty.",
+      "duplicate_name": "That name is already used."
     },
     "abort": {
       "already_configured": "This device is already configured.",
@@ -399,6 +427,32 @@
         "config_entry_id": {
           "name": "Litter box",
           "description": "Only needed with more than one UAHPET litter box with cats."
+        }
+      }
+    },
+    "add_cat": {
+      "name": "Add cat",
+      "description": "Add a cat profile to a UAHPET litter box (it reloads with the new cat).",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name of the cat."
+        },
+        "weight": {
+          "name": "Weight",
+          "description": "Approximate weight in kg (it is learned on every visit)."
+        },
+        "color": {
+          "name": "Colour",
+          "description": "Optional, e.g. #e15759."
+        },
+        "picture": {
+          "name": "Photo",
+          "description": "Optional URL or /local/… path."
+        },
+        "config_entry_id": {
+          "name": "Litter box",
+          "description": "Only needed with more than one UAHPET litter box."
         }
       }
     }

@@ -33,3 +33,6 @@ CONF_NOTIFY_UNIDENTIFIED = "notify_unidentified"
 CONF_NOTIFY_HEALTH = "notify_health"
 CONF_CAT_NOTIFY_VISIT = "notify_visit"
 CONF_CAT_ALERT_HOURS = "alert_hours"
+
+# cats chosen in the setup flow, picked up by the coordinator on its first load (device id -> state)
+PENDING_CATS = f"{DOMAIN}_pending_cats"

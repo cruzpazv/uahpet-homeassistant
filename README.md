@@ -32,7 +32,8 @@ Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, b
 <td><img src="docs/images/timeline.png" alt="Timeline card" width="380"><br><b>Timeline</b>: visits, cleanings, emptying, alerts</td></tr>
 <tr><td><img src="docs/images/stats.png" alt="Statistics card" width="380"><br><b>Statistics</b> per day<br><br><img src="docs/images/mini.png" alt="Compact card" width="380"><br><b>Compact</b><br><br><img src="docs/images/maintenance-mini.png" alt="Compact maintenance" width="380"><br><b>Compact maintenance</b></td>
 <td><img src="docs/images/maintenance.png" alt="Maintenance card" width="380"><br><b>Maintenance</b>: waste bin and how to fix each alert</td></tr>
-<tr><td><img src="docs/images/settings.png" alt="Settings card" width="380"><br><b>Settings</b>, with the app's explanations</td><td></td></tr>
+<tr><td><img src="docs/images/settings.png" alt="Settings card" width="380"><br><b>Settings</b>, with the app's explanations</td>
+<td><img src="docs/images/cats-add.png" alt="Adding a cat from the card" width="380"><br><b>Add a cat</b> straight from the Cats card<br><br><img src="docs/images/main-noart.png" alt="Main card without the drawing" width="380"><br><b>Main</b> with <code>show_art: false</code></td></tr>
 </table>
 
 ### Air purifier
@@ -91,7 +92,7 @@ Settings → Devices & services → Add integration → **UAHPET**: device ID an
 | Sensor *Status* | 108 | Standby, cleaning, emptying, levelling, weighing error, cat detected, waiting for litter to clump |
 | Sensor *Waste bin* | 113 | OK, full, missing, cover open |
 | Sensor *Active alerts* | 21, 22 | Number of active alerts, attribute `alerts` |
-| Sensor *Cleanings today* | derived | Counted from the status changes, resets at midnight |
+| Sensor *Cleanings today* | derived | Counted from the status changes, resets at midnight. The short turn right after a visit (burying the waste, before the clean delay) is not counted |
 | Sensor *Last cleaning* / *Next auto clean* | derived | Timestamps. Next auto clean = end of visit + clean delay (not set when auto clean or Do not disturb stop it) |
 | Sensor *Waste bin last emptied* | derived | When the bin goes back to OK after being full or taken out |
 | Event *Visit* | 7, 8, 106 | One event per visit with `weight` (kg) and `duration` (s); with cat profiles its type is the cat's name |
@@ -121,18 +122,20 @@ Derived values are kept across restarts (stored per device).
 
 The cards load automatically with the integration and follow the UAHPET app. Add them from the card picker (search "UAHPET"); all have a visual editor. `device_id` is optional: without it each card uses the first matching device. Texts in English and Spanish.
 
+**Size:** every card has a `scale` option (0.7–1.5, *Size* in the editor) to make it smaller or bigger, and fills the height you give it in a sections dashboard.
+
 ### Litter box cards
 
 | Card | What it shows |
 |---|---|
-| `custom:uahpet-litterbox-card` | Animated drawing of the litter box (drum turns while cleaning, litter waves while levelling, cat and radar pulse when a cat is nearby), status in the app's words, **auto clean countdown**, bin / litter / alert chips, today's visits, cleanings and last cat, a row with each cat, Clean / Level / Empty (Level and Empty ask for confirmation; while a task runs its button becomes **Stop**), quick toggles for auto clean and Do not disturb |
-| `custom:uahpet-litterbox-timeline-card` | Today's (or last 24 h) visits with duration and weight, cleanings, emptying, levelling, bin emptied and alerts. With [Litter Cat Identifier](https://github.com/cruzpazv/litter-cat-identifier) each visit shows the cat's name |
+| `custom:uahpet-litterbox-card` | Animated drawing of the litter box (drum turns while cleaning, litter waves while levelling, cat and radar pulse when a cat is nearby), status in the app's words, **auto clean countdown**, bin / litter / alert chips, today's visits, cleanings and last cat, a row with each cat, Clean / Level / Empty (Level and Empty ask for confirmation; while a task runs its button becomes **Stop**), quick toggles for auto clean and Do not disturb. `show_art: false` hides the drawing |
+| `custom:uahpet-litterbox-timeline-card` | Today's (or last 24 h) visits with duration and weight, cleanings, emptying, levelling, bin emptied and alerts. The short turn right after a visit is shown as *Waste buried*, not as a cleaning (`show_burying: false` hides it). With [Litter Cat Identifier](https://github.com/cruzpazv/litter-cat-identifier) each visit shows the cat's name |
 | `custom:uahpet-litterbox-stats-card` | Visits, cleanings, visit duration and weight per day, 7 or 30 days. Tap a day for its value |
 | `custom:uahpet-litterbox-settings-card` | Cleaning (auto clean, clean delay with quick presets, bury delay), litter type, Do not disturb, radar, child lock, ionizer, visits alert and unit, each with the app's explanation. `show_advanced: true` adds manual motor control and developer mode |
 | `custom:uahpet-litterbox-maintenance-card` | Waste bin drawing and state, when it was last emptied and cleaned, and every active alert with how to fix it (plus a Level button where it helps) |
 | `custom:uahpet-litterbox-mini-card` | One row: status, visits today and a clean button |
 | `custom:uahpet-litterbox-maintenance-mini-card` | One row: waste bin state, when it was emptied, number of alerts |
-| `custom:uahpet-cats-card` / `custom:uahpet-cat-card` | Cats (or one cat): photo or coloured icon, learned weight, visits today, last visit, health alerts. Options: `layout: vertical`, `avatar_size` (px), `show_photo`, `columns`, which cats |
+| `custom:uahpet-cats-card` / `custom:uahpet-cat-card` | Cats (or one cat): photo or coloured icon, learned weight, visits today, last visit, health alerts. The Cats card has **+ Add a cat** and **Manage cats** (`show_add: false` hides them). Options: `layout: vertical`, `avatar_size` (px), `show_photo`, `columns`, which cats |
 | `custom:uahpet-visits-card` | Recent visits with cat, weight, duration and why unidentified ones were not matched. `collapsible: true`, `count`, `expanded_count`, whole history |
 | `custom:uahpet-visits-chart-card` | Visits per day with one bar per cat, 7 or 30 days, tap a day / a cat |
 | `custom:uahpet-weight-chart-card` | Weight of each cat over time, one line per cat in its colour, 7 / 30 / 90 days; the legend shows the latest weight and the change; tap for the values |
@@ -183,7 +186,9 @@ Full example: [examples/dashboard.yaml](examples/dashboard.yaml).
 
 UAHPET can tell your cats apart on its own, like the UAHPET app.
 
-**Where:** Settings → Devices & services → **UAHPET** → the **⚙** on the litter box's entry (the row with the entry name, not the device row with the pencil). It opens this menu:
+**The quickest way:** when you set the litter box up, the last step asks for your cats (or imports them from Litter Cat Identifier). Later, use **+ Add a cat** on the Cats card (name, weight, colour), or the `uahpet.add_cat` service.
+
+**Everything else** (photo, notifications, identification settings): Settings → Devices & services → **UAHPET** → the **⚙** on the litter box's entry (the row with the entry name, not the device row with the pencil), or **Manage cats** on the Cats card. It opens this menu:
 
 | Menu | What it does |
 |---|---|
@@ -196,7 +201,7 @@ Entities per cat: *{cat} weight* (learned), *{cat} visits today*, *{cat} last vi
 
 Health alerts compare each cat with itself: many more visits than usual, a much longer visit than usual, or 5 % of weight lost in three weeks. They need about a week of history first. Not medical advice.
 
-Services: `uahpet.reassign_last_visit` (fix the last visit's cat), `uahpet.recalibrate_weight` (to a value or the median of the latest readings), `uahpet.clear_unidentified_visits`.
+Services: `uahpet.add_cat` (name, weight, colour, photo URL), `uahpet.reassign_last_visit` (fix the last visit's cat), `uahpet.recalibrate_weight` (to a value or the median of the latest readings), `uahpet.clear_unidentified_visits`.
 
 The colour picked for a cat is used by every card. A card can still override it in YAML: `colors: {Luna: "#e15759"}`.
 

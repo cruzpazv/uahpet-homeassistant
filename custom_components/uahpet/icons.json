@@ -189,6 +189,9 @@
     },
     "clear_unidentified_visits": {
       "service": "mdi:broom"
+    },
+    "add_cat": {
+      "service": "mdi:cat"
     }
   }
 }

@@ -49,3 +49,36 @@ clear_unidentified_visits:
       selector:
         config_entry:
           integration: uahpet
+
+add_cat:
+  fields:
+    name:
+      required: true
+      example: "Luna"
+      selector:
+        text:
+    weight:
+      required: true
+      example: 4.2
+      selector:
+        number:
+          min: 0.5
+          max: 15
+          step: 0.05
+          unit_of_measurement: kg
+          mode: box
+    color:
+      required: false
+      example: "#e15759"
+      selector:
+        text:
+    picture:
+      required: false
+      example: "/local/cats/luna.jpg"
+      selector:
+        text:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: uahpet

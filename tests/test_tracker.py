@@ -64,3 +64,22 @@ def test_persistence_roundtrip():
     assert other.cleanings(T0) == 3 and other.last_cleaning == T0 and other.last_bin_emptied == T0
     other.load(None)  # nothing stored yet
     assert other.cleanings(T0) == 3
+
+
+def test_burying_is_not_a_cleaning():
+    """Visit, then a short 'cleaning' ~1 min later (covering the waste), then the real clean after the 8 min delay."""
+    tr = LitterboxTracker()
+    _upd.now = T0
+    _, state = _upd(tr, dict(SAMPLE_DPS), **{"7": 9})  # visit, delay 480 s
+    _upd.now = T0 + timedelta(seconds=60)
+    res, state = _upd(tr, state, **{"108": "cleaning"})
+    assert res.burying and tr.cleanings(_upd.now) == 0 and tr.next_auto_clean == T0 + timedelta(seconds=480)
+    _, state = _upd(tr, state, **{"108": "standby"})
+    _upd.now = T0 + timedelta(seconds=485)
+    res, state = _upd(tr, state, **{"108": "cleaning"})
+    assert not res.burying and tr.cleanings(_upd.now) == 1 and tr.next_auto_clean is None
+    # a manual clean long after any visit is a cleaning
+    _, state = _upd(tr, state, **{"108": "standby"})
+    _upd.now = T0 + timedelta(hours=3)
+    _, state = _upd(tr, state, **{"108": "cleaning"})
+    assert tr.cleanings(_upd.now) == 2

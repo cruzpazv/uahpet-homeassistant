@@ -113,6 +113,8 @@ async def test_derived_sensors_and_visit_event(hass: HomeAssistant, fake_client)
     assert st("event", "visit").state == "unknown"
 
     # a visit: counter + weight + duration arrive, the event fires once they settle
+    client.on_dps({"5": 60})  # short clean delay: the clean right after the visit is a real cleaning
+    await hass.async_block_till_done()
     client.on_dps({"7": 9, "106": 43})
     client.on_dps({"8": 37})
     await hass.async_block_till_done()

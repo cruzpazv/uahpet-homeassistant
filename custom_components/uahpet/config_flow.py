@@ -54,6 +54,7 @@ from .const import (
     CONF_SMOOTHING,
     CONF_TOLERANCE,
     DOMAIN,
+    PENDING_CATS,
     PROTOCOL_AUTO,
     PROTOCOLS,
 )
@@ -75,6 +76,11 @@ RECONFIGURE_SCHEMA = vol.Schema(CONNECTION_SCHEMA)
 
 class UahpetConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
+    def __init__(self) -> None:
+        self._title = ""
+        self._data: dict[str, Any] = {}
+        self._cats: list[dict[str, Any]] = []
 
     @staticmethod
     @callback
@@ -109,14 +115,61 @@ class UahpetConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
             data, profile, error = await self._connect(device_id, user_input)
             if data and profile:
-                return self.async_create_entry(
-                    title=user_input.get(CONF_NAME, "").strip() or profile.default_name,
-                    data={CONF_DEVICE_ID: device_id, CONF_PROFILE: profile.key, **data},
-                )
+                self._title = user_input.get(CONF_NAME, "").strip() or profile.default_name
+                self._data = {CONF_DEVICE_ID: device_id, CONF_PROFILE: profile.key, **data}
+                if profile.visit_data:  # a litter box: offer to set the cats up right away
+                    return await self.async_step_cats()
+                return self.async_create_entry(title=self._title, data=self._data)
             errors["base"] = error or "unknown"
         return self.async_show_form(
             step_id="user", data_schema=self.add_suggested_values_to_schema(USER_SCHEMA, user_input), errors=errors
         )
+
+    # ---------- cats while setting up ----------
+
+    async def async_step_cats(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        menu = ["setup_add_cat"]
+        if self.hass.config_entries.async_entries(LCI):
+            menu.append("setup_import_lci")
+        menu.append("setup_done")
+        return self.async_show_menu(step_id="cats", menu_options=menu)
+
+    async def async_step_setup_add_cat(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            name = user_input[CONF_CAT_NAME].strip()
+            taken = {c[CONF_CAT_NAME].casefold() for c in self._cats} | {UNIDENTIFIED}
+            if not name:
+                errors[CONF_CAT_NAME] = "invalid_name"
+            elif name.casefold() in taken:
+                errors[CONF_CAT_NAME] = "duplicate_name"
+            else:
+                self._cats.append({CONF_CAT_NAME: name, CONF_CAT_WEIGHT: float(user_input[CONF_CAT_WEIGHT]),
+                                   CONF_CAT_COLOR: user_input.get(CONF_CAT_COLOR)})
+                if not user_input.get("add_another"):
+                    return self.async_create_entry(title=self._title, data=self._data, options={CONF_CATS: self._cats})
+        schema = vol.Schema({
+            vol.Required(CONF_CAT_NAME): str,
+            vol.Required(CONF_CAT_WEIGHT, default=4.0): _kg(0.5, 15, 0.05),
+            vol.Optional(CONF_CAT_COLOR): ColorRGBSelector(),
+            vol.Required("add_another", default=not self._cats): BooleanSelector(),
+        })
+        return self.async_show_form(step_id="setup_add_cat", data_schema=schema, errors=errors,
+                                    description_placeholders={"count": str(len(self._cats) + 1)})
+
+    async def async_step_setup_import_lci(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        entries = {e.entry_id: e for e in self.hass.config_entries.async_entries(LCI)}
+        if user_input is not None:
+            cats, settings, state = await _import_lci(self.hass, entries[user_input["lci_entry"]])
+            self.hass.data.setdefault(PENDING_CATS, {})[self._data[CONF_DEVICE_ID]] = state
+            return self.async_create_entry(title=self._title, data=self._data, options={**settings, CONF_CATS: cats})
+        options = [{"value": e.entry_id, "label": e.title} for e in entries.values()]
+        schema = vol.Schema({vol.Required("lci_entry", default=options[0]["value"]): SelectSelector(
+            SelectSelectorConfig(options=options, mode=SelectSelectorMode.LIST))})
+        return self.async_show_form(step_id="setup_import_lci", data_schema=schema)
+
+    async def async_step_setup_done(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return self.async_create_entry(title=self._title, data=self._data)
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         entry = self._get_reconfigure_entry()

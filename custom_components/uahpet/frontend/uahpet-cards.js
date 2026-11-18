@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
@@ -13,13 +13,16 @@ const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_vis
 const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", cancel: "Cancel", confirm_btn: "Continue",
+    ev_burying: "Waste buried", st_burying: "Burying the waste", ed_show_burying: "Show burying", ed_scale: "Size",
+    add_cat: "Add a cat", manage_cats: "Manage cats", f_name: "Name", f_weight: "Approximate weight (kg)", f_color: "Colour", add_btn: "Add",
+    add_hint: "Photo, notifications and more in Manage cats.", adding: "Adding…",
     air_short: "Air", display: "Display", display_on: "Display on", display_off: "Display off", auto_mode: "Auto", sleep_mode_p: "Sleep",
     next_speed: "Next speed", more_settings: "Settings", c_purifier_bar: "UAHPET air purifier (buttons)", c_purifier_bar_d: "Status line with air quality and a row of round buttons.",
     weight_chart: "Weight", change: "{v} kg in {n} days", ed_layout: "Layout", ed_avatar_size: "Photo size (px)", ed_show_photo: "Show photo",
     lay_horizontal: "Horizontal", lay_vertical: "Vertical", c_weight: "UAHPET weight per cat", c_weight_d: "Weight of each cat over time, one line per cat.",
     hide_unk: "Hide unidentified", show_unk: "Show unidentified ({n})", clear_unk: "Clear unidentified",
     dlg_clear_t: "Clear unidentified visits?", dlg_clear: "They are removed from the log and today's count is reset.", dlg_clear_ok: "Clear",
-    ed_show_toggle: "Show hide / clear buttons",
+    ed_show_toggle: "Show hide / clear buttons", ed_show_add: "Show Add a cat / Manage cats",
     stop: "Stop", dlg_empty_ok: "Empty", cats: "Cats", today_n: "{n} today", last_at: "last {t}", never: "no visits yet",
     visits_card: "Recent visits", th_time: "Time", th_cat: "Cat", th_weight: "Weight", th_duration: "Duration",
     more: "Show more", less: "Show less", all_hist: "Whole history", chart: "Visits per day", last_days: "Last {n} days (tap a day for details)",
@@ -90,7 +93,7 @@ const I18N = {
     purifier_not_found: "No Tuya air purifier found. Set it up in the Tuya integration first.",
     // editors
     ed_device_id: "Device", ed_title: "Title", ed_show_actions: "Show actions", ed_show_quick: "Show quick toggles",
-    ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
+    ed_show_art: "Show the litter box drawing", ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
     ed_max_items: "Maximum entries", ed_show_cleanings: "Show cleanings", ed_show_alerts: "Show alerts",
     ed_days: "Days", ed_metric: "Default chart", ed_show_modes: "Show modes", ed_show_speed: "Show speed",
     ed_show_timer: "Show timer", ed_show_extras: "Show child lock and filter reset",
@@ -105,13 +108,16 @@ const I18N = {
   },
   es: {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", cancel: "Cancelar", confirm_btn: "Continuar",
+    ev_burying: "Excrementos enterrados", st_burying: "Enterrando los excrementos", ed_show_burying: "Mostrar enterrados", ed_scale: "Tamaño",
+    add_cat: "Añadir un gato", manage_cats: "Gestionar gatos", f_name: "Nombre", f_weight: "Peso aproximado (kg)", f_color: "Color", add_btn: "Añadir",
+    add_hint: "Foto, avisos y más en Gestionar gatos.", adding: "Añadiendo…",
     air_short: "Aire", display: "Pantalla", display_on: "Pantalla encendida", display_off: "Pantalla apagada", auto_mode: "Auto", sleep_mode_p: "Noche",
     next_speed: "Siguiente velocidad", more_settings: "Ajustes", c_purifier_bar: "Purificador UAHPET (botones)", c_purifier_bar_d: "Línea de estado con la calidad del aire y una fila de botones redondos.",
     weight_chart: "Peso", change: "{v} kg en {n} días", ed_layout: "Disposición", ed_avatar_size: "Tamaño de la foto (px)", ed_show_photo: "Mostrar foto",
     lay_horizontal: "Horizontal", lay_vertical: "Vertical", c_weight: "Peso por gato UAHPET", c_weight_d: "Peso de cada gato a lo largo del tiempo, una línea por gato.",
     hide_unk: "Ocultar sin identificar", show_unk: "Mostrar sin identificar ({n})", clear_unk: "Borrar sin identificar",
     dlg_clear_t: "¿Borrar las visitas sin identificar?", dlg_clear: "Se quitan del registro y se pone a cero la cuenta de hoy.", dlg_clear_ok: "Borrar",
-    ed_show_toggle: "Mostrar botones de ocultar / borrar",
+    ed_show_toggle: "Mostrar botones de ocultar / borrar", ed_show_add: "Mostrar Añadir gato / Gestionar gatos",
     stop: "Detener", dlg_empty_ok: "Vaciar", cats: "Gatos", today_n: "{n} hoy", last_at: "última {t}", never: "sin visitas",
     visits_card: "Últimas visitas", th_time: "Hora", th_cat: "Gato", th_weight: "Peso", th_duration: "Duración",
     more: "Ver más", less: "Ver menos", all_hist: "Todo el historial", chart: "Visitas por día", last_days: "Últimos {n} días (toca un día para ver el detalle)",
@@ -176,7 +182,7 @@ const I18N = {
     speed_sleep: "Noche", timer_cancel: "No",
     purifier_not_found: "No hay ningún purificador Tuya. Añádelo antes a la integración de Tuya.",
     ed_device_id: "Dispositivo", ed_title: "Título", ed_show_actions: "Mostrar acciones", ed_show_quick: "Mostrar interruptores rápidos",
-    ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
+    ed_show_art: "Mostrar el dibujo del arenero", ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
     ed_max_items: "Máximo de entradas", ed_show_cleanings: "Mostrar limpiezas", ed_show_alerts: "Mostrar avisos",
     ed_days: "Días", ed_metric: "Gráfica inicial", ed_show_modes: "Mostrar modos", ed_show_speed: "Mostrar velocidad",
     ed_show_timer: "Mostrar temporizador", ed_show_extras: "Mostrar bloqueo y reinicio del filtro",
@@ -325,7 +331,7 @@ function makeEditor(schemaFn, defaults = {}) {
         this._form.addEventListener("value-changed", (ev) => {
           const config = { ...ev.detail.value };
           for (const k of Object.keys(config)) {
-            if (config[k] === "" || config[k] === undefined || defaults[k] === config[k]) delete config[k];
+            if (config[k] === "" || config[k] === undefined || defaults[k] === config[k] || (k === "scale" && Number(config[k]) === 1)) delete config[k];
           }
           this._config = config;
           fire(this, "config-changed", { config });
@@ -333,9 +339,10 @@ function makeEditor(schemaFn, defaults = {}) {
         this.appendChild(this._form);
       }
       this._form.hass = this._hass;
-      this._form.schema = schemaFn(this._hass, this._config);
+      this._form.schema = [...schemaFn(this._hass, this._config),
+        { name: "scale", selector: { number: { min: 0.7, max: 1.5, step: 0.05, mode: "slider" } } }];
       // ha-form does not apply defaults itself: show toggles with their real value.
-      this._form.data = { ...defaults, ...this._config };
+      this._form.data = { scale: 1, ...defaults, ...this._config };
     }
   };
 }
@@ -394,7 +401,7 @@ class UahpetCard extends HTMLElement {
   }
 
   getCardSize() { return 5; }
-  getGridOptions() { return { columns: 12, min_columns: 6, rows: "auto" }; }
+  getGridOptions() { return { columns: 12, min_columns: 4, rows: "auto" }; }
   handle() {}
   extraKey() { return ""; }
 
@@ -422,6 +429,7 @@ class UahpetCard extends HTMLElement {
 
   _render() {
     if (!this._hass || !this._config) return;
+    if (this._freeze && this.shadowRoot.innerHTML) return;  // a form is open: keep what is being typed
     const { dev, map } = this.lookup();
     this._map = map;
     this._dev = dev;
@@ -438,7 +446,8 @@ class UahpetCard extends HTMLElement {
         <div class="dlg-t">${esc(d.title)}</div><div class="dlg-x">${esc(d.text)}</div>
         <div class="dlg-b"><button class="btn" data-act="dlg-cancel">${esc(t(this._hass, "cancel"))}</button>
         <button class="btn primary" data-act="dlg-ok">${esc(d.danger || t(this._hass, "confirm_btn"))}</button></div></div></div>` : "";
-    this.shadowRoot.innerHTML = `${STYLE}<ha-card>${this.body()}${dlg}</ha-card>`;
+    const scale = Number(this._config.scale) || 1;
+    this.shadowRoot.innerHTML = `${STYLE}<ha-card ${scale !== 1 ? `style="zoom:${scale}"` : ""}>${this.body()}${dlg}</ha-card>`;
     this.tick?.();
   }
 }
@@ -451,6 +460,14 @@ class LitterCard extends UahpetCard {
   status() {
     const s = this._state("work_status");
     return isOff(s) ? "offline" : s.state;
+  }
+
+  /** Cleaning right after a visit, well before the clean delay: burying the waste. */
+  burying() {
+    if (this.status() !== "cleaning") return false;
+    const visit = this._state("visit"), delay = num(this._state("clean_delay"));
+    const at = known(visit) ? Date.parse(visit.state) : NaN;
+    return !isNaN(at) && delay > 90 && (Date.now() - at) / 1000 < delay - 30;
   }
 }
 
@@ -493,7 +510,7 @@ const ALERT_ICONS = {
 };
 
 class UahpetLitterboxCard extends LitterCard {
-  static defaults = { show_stats: true, show_cats: true, show_actions: true, show_quick: true };
+  static defaults = { show_art: true, show_stats: true, show_cats: true, show_actions: true, show_quick: true };
   static getConfigElement() { return document.createElement("uahpet-litterbox-card-editor"); }
 
   extraKey() {
@@ -565,11 +582,11 @@ class UahpetLitterboxCard extends LitterCard {
     }).join("");
 
     return `
-      <div class="hero">
-        ${boxArt(status, bin?.state)}
+      <div class="hero ${c.show_art ? "" : "no-art"}">
+        ${c.show_art ? boxArt(status, bin?.state) : ""}
         <div class="hero-text">
           <div class="title">${esc(this.cardTitle("c_main"))}</div>
-          <button class="status ${STATUS_TONE[status] || "ok"}" data-act="info" data-key="work_status">${esc(t(h, `st_${status}`))}</button>
+          <button class="status ${STATUS_TONE[status] || "ok"}" data-act="info" data-key="work_status">${esc(t(h, this.burying() ? "st_burying" : `st_${status}`))}</button>
           <div class="auto-line sub"></div>
         </div>
       </div>
@@ -599,7 +616,7 @@ class UahpetLitterboxCard extends LitterCard {
 /* ---------- 2. timeline ---------- */
 
 class UahpetLitterboxTimelineCard extends LitterCard {
-  static defaults = { range: "today", max_items: 20, show_cleanings: true, show_alerts: true };
+  static defaults = { range: "today", max_items: 20, show_cleanings: true, show_burying: true, show_alerts: true };
   static getConfigElement() { return document.createElement("uahpet-litterbox-timeline-card-editor"); }
   static getStubConfig(hass) { return { device_id: litterDevices(hass)[0] || "" }; }
 
@@ -654,19 +671,28 @@ class UahpetLitterboxTimelineCard extends LitterCard {
     for (const row of hist[m.visit] || []) {
       if (row.a) attrs = row.a;
       const ts = Date.parse(row.s);
-      if (isNaN(ts) || ts < start || attrs.event_type !== "visit") continue;
+      // event_type is "visit", or the cat's name / "unidentified" with cat profiles
+      if (isNaN(ts) || ts < start || !attrs.event_type) continue;
       const match = attrs.cat ? { cat: attrs.cat } : cats.find((v) => Math.abs(v.ts - ts) < 120000);
       const cat = match ? (match.cat === "unidentified" ? t(h, "unidentified") : match.cat) : null;
       items.push({ ts, kind: "visit", icon: "mdi:paw", duration: attrs.duration, weight: attrs.weight, cat });
     }
-    // cleanings, emptying, levelling
+    // cleanings, emptying, levelling. A "cleaning" well before the clean delay after a visit is the
+    // litter box burying the waste, not the automatic clean that follows the delay.
     if (this._config.show_cleanings) {
+      const visitTimes = items.filter((i) => i.kind === "visit").map((i) => i.ts).sort((a, b) => a - b);
+      const delay = num(this._state("clean_delay"));
       let prev = null;
       for (const row of hist[m.work_status] || []) {
         const ts = tsOf(row);
         if (row.s !== prev && ["cleaning", "clearing", "leveling"].includes(row.s) && ts >= start) {
-          const icon = { cleaning: "mdi:broom", clearing: "mdi:delete-empty", leveling: "mdi:waves" }[row.s];
-          items.push({ ts, kind: "status", icon, text: t(h, `ev_${row.s}`) });
+          const visit = visitTimes.filter((v) => v <= ts + 15000).pop();
+          if (row.s === "cleaning" && visit && delay > 90 && (ts - visit) / 1000 < delay - 30) {
+            if (this._config.show_burying) items.push({ ts, kind: "bury", icon: "mdi:shovel", text: t(h, "ev_burying") });
+          } else {
+            const icon = { cleaning: "mdi:broom", clearing: "mdi:delete-empty", leveling: "mdi:waves" }[row.s];
+            items.push({ ts, kind: "status", icon, text: t(h, `ev_${row.s}`) });
+          }
         }
         prev = row.s;
       }
@@ -1037,7 +1063,52 @@ class CatCardBase extends LitterCard {
     return r;
   }
   extraKey() { return catIds(this._src).map((id) => this._hass.states[id]?.last_updated).join("|"); }
-  noCats() { return `<div class="empty">${esc(t(this._hass, "no_cats"))}</div>`; }
+  noCats() {
+    return `<div class="empty">${esc(t(this._hass, "no_cats"))}</div>${this.addControls(true)}`;
+  }
+
+  /** UAHPET's own cats can be added from the card; the rest (photo, notifications…) in the integration. */
+  canAdd() { return !!this._dev && (!this._src || this._src.kind === DOMAIN); }
+
+  addControls(big = false) {
+    const h = this._hass;
+    if (!this.canAdd()) return "";
+    if (this._adding) {
+      const n = this._src ? this._src.cats.length : 0;
+      return `<div class="addform">
+        <label>${esc(t(h, "f_name"))}<input id="cat-name" type="text" autocomplete="off"></label>
+        <label>${esc(t(h, "f_weight"))}<input id="cat-weight" type="number" min="0.5" max="15" step="0.05" value="4"></label>
+        <label class="color">${esc(t(h, "f_color"))}<input id="cat-color" type="color" value="${PALETTE[n % PALETTE.length]}"></label>
+        <div class="sub">${esc(t(h, "add_hint"))}</div>
+        <div class="dlg-b"><button class="btn" data-act="add-cancel">${esc(t(h, "cancel"))}</button>
+          <button class="btn primary" data-act="add-save">${esc(t(h, "add_btn"))}</button></div></div>`;
+    }
+    return `<div class="addrow ${big ? "big" : ""}">
+      <button class="${big ? "btn primary" : "link"}" data-act="add-open"><ha-icon icon="mdi:plus"></ha-icon>${esc(t(h, "add_cat"))}</button>
+      <button class="link" data-act="manage"><ha-icon icon="mdi:cog-outline"></ha-icon>${esc(t(h, "manage_cats"))}</button></div>`;
+  }
+
+  handleAdd(act) {
+    const h = this._hass;
+    if (act === "add-open") { this._adding = true; this._freeze = false; setTimeout(() => { this._freeze = true; this.shadowRoot.getElementById("cat-name")?.focus(); }, 0); return true; }
+    if (act === "add-cancel") { this._adding = false; this._freeze = false; return true; }
+    if (act === "manage") {
+      history.pushState(null, "", `/config/integrations/integration/${DOMAIN}`);
+      window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+      return true;
+    }
+    if (act === "add-save") {
+      const root = this.shadowRoot;
+      const name = root.getElementById("cat-name")?.value.trim();
+      const weight = parseFloat(root.getElementById("cat-weight")?.value);
+      if (!name || !(weight > 0)) { root.getElementById(name ? "cat-weight" : "cat-name")?.focus(); return true; }
+      const entry = h.devices?.[this._dev]?.config_entries?.[0];
+      h.callService(DOMAIN, "add_cat", { name, weight, color: root.getElementById("cat-color")?.value, ...(entry ? { config_entry_id: entry } : {}) });
+      this._adding = false; this._freeze = false;
+      return true;
+    }
+    return false;
+  }
 
   tile(cat, big = false) {
     const h = this._hass, c = this._config;
@@ -1060,11 +1131,14 @@ class CatCardBase extends LitterCard {
         ${alerts.map((a) => `<span class="cat-alert"><ha-icon icon="mdi:heart-pulse"></ha-icon>${esc(a)}</span>`).join("")}</span></button>`;
   }
 
-  handle(act, key, val) { if (act === "cat" && val) fire(this, "hass-more-info", { entityId: val }); }
+  handle(act, key, val) {
+    if (this.handleAdd(act)) return;
+    if (act === "cat" && val) fire(this, "hass-more-info", { entityId: val });
+  }
 }
 
 class UahpetCatsCard extends CatCardBase {
-  static defaults = { columns: 2, layout: "horizontal", show_photo: true, show_weight: true, show_visits: true, show_last: true };
+  static defaults = { columns: 2, layout: "horizontal", show_photo: true, show_weight: true, show_visits: true, show_last: true, show_add: true };
   static getConfigElement() { return document.createElement("uahpet-cats-card-editor"); }
   static getStubConfig() { return {}; }
   body() {
@@ -1073,7 +1147,7 @@ class UahpetCatsCard extends CatCardBase {
     if (!this._src) return head + this.noCats();
     const wanted = Array.isArray(c.cats) && c.cats.length ? c.cats : null;
     const tiles = this._src.cats.filter((cat) => !wanted || wanted.includes(cat.name)).map((cat) => this.tile(cat)).join("");
-    return `${head}<div class="cat-grid" style="--cols:${Number(c.columns) || 2}">${tiles}</div>`;
+    return `${head}<div class="cat-grid" style="--cols:${Number(c.columns) || 2}">${tiles}</div>${c.show_add !== false ? this.addControls() : ""}`;
   }
 }
 
@@ -1421,6 +1495,18 @@ class UahpetPurifierCard extends UahpetCard {
     else if (act === "reset" && this._confirm(key)) this._call("switch", "turn_on", key);
   }
 
+  /** Spin time (s) of the fan icon: sleep is the slowest, then each speed; auto follows its current speed. */
+  _spin(fan) {
+    const mode = fan?.attributes.preset_mode;
+    if (!fan || fan.state !== "on") return 3;
+    if (mode === "sleep") return 5;
+    const speeds = this._speeds(fan), pct = Number(fan.attributes.percentage) || 0;
+    const idx = speeds.length && pct ? Math.max(0, Math.ceil((pct * speeds.length) / 100) - 1) : -1;
+    if (idx < 0) return 2.4;
+    const f = speeds.length > 1 ? idx / (speeds.length - 1) : 1;  // 0 slowest .. 1 fastest
+    return Number((3.8 - 2.8 * f).toFixed(2));
+  }
+
   _speeds(fan) {
     const step = Number(fan.attributes.percentage_step);
     const n = step > 0 ? Math.round(100 / step) : 0;
@@ -1465,7 +1551,7 @@ class UahpetPurifierCard extends UahpetCard {
     return `
       <div class="head">
         <button class="badge ${on ? "busy" : offline ? "bad" : "idle"}" data-act="info" data-key="fan">
-          <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${(3.2 - 2.4 * (pct / 100)).toFixed(2)}s"
+          <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${this._spin(fan)}s"
             icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon>
         </button>
         <div class="titles">
@@ -1522,7 +1608,7 @@ class UahpetPurifierMiniCard extends UahpetPurifierCard {
       known(filter) ? `${t(h, "filter")} ${Math.round(num(filter))} %` : "",
     ].filter(Boolean).join(" · ");
     return `<div class="mini"><button class="badge small ${tilted ? "bad" : on ? "busy" : offline ? "bad" : "idle"}" data-act="info" data-key="fan">
-        <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${(3.2 - 2.4 * (pct / 100)).toFixed(2)}s" icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon></button>
+        <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${this._spin(fan)}s" icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon></button>
       <div class="titles"><div class="title">${esc(this._config.title || this._deviceName(this._dev) || t(h, "c_purifier"))}</div><div class="sub ${tilted ? "bad-text" : ""}">${esc(sub)}</div></div>
       <button class="power ${on ? "on" : ""}" data-act="power" aria-label="${esc(t(h, "power"))}" aria-pressed="${on}" ${offline ? "disabled" : ""}><ha-icon icon="mdi:power"></ha-icon></button></div>`;
   }
@@ -1591,9 +1677,16 @@ class UahpetPurifierBarCard extends UahpetPurifierCard {
           ${reset ? `<button class="toggle ${this._armed === "filter_cartridge_reset" ? "armed" : ""}" data-act="reset" data-key="filter_cartridge_reset" ${dis}><ha-icon icon="mdi:restore"></ha-icon>${esc(t(h, this._armed === "filter_cartridge_reset" ? "confirm" : "filter_reset"))}</button>` : ""}
         </div>` : ""}</div>`;
     }
-    return `<div class="head">
+    return `<style>
+        ha-card { padding: 12px 14px; gap: 10px; }
+        .head { gap: 10px; } .head .badge { width: 40px; height: 40px; } .head .badge ha-icon { --mdc-icon-size: 22px; }
+        .head .title { font-size: 1.02em; }
+        .head .sub { font-size: .8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pbar { padding: 4px 6px; } .pbtn { width: 38px; height: 38px; } .pbtn ha-icon { --mdc-icon-size: 21px; }
+        .ppanel { gap: 10px; }
+      </style><div class="head">
         <button class="badge ${tilted || offline ? "bad" : aqTone}" data-act="info" data-key="${known(aq) ? "air_quality" : "fan"}">
-          <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${(3.2 - 2.4 * (pct / 100)).toFixed(2)}s" icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon></button>
+          <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${this._spin(fan)}s" icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon></button>
         <div class="titles"><div class="title">${esc(c.title || this._deviceName(this._dev) || t(h, "c_purifier"))}</div>
           <div class="sub ${tilted ? "bad-text" : ""}">${esc(line)}</div></div>
       </div>
@@ -1607,7 +1700,7 @@ const STYLE = `<style>
   :host { --ok: var(--success-color, #43a047); --warn: var(--warning-color, #ffa000); --bad: var(--error-color, #db4437);
     --busy: var(--primary-color, #03a9f4); --muted: var(--secondary-text-color); --soft: var(--secondary-background-color, rgba(127,127,127,.08));
     --box-body: #4fb393; --box-base: #2a6b5a; --box-rim: #e6f0ec; --box-hole: #163a32; --box-litter: #e3c48c; }
-  ha-card { padding: 16px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; }
+  ha-card { padding: 16px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; height: 100%; box-sizing: border-box; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; text-align: inherit; }
   button[disabled] { opacity: .4; cursor: default; }
   button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
@@ -1716,7 +1809,8 @@ const STYLE = `<style>
   .tl-dot ha-icon { --mdc-icon-size: 16px; }
   .tl-visit .tl-dot { border-color: var(--primary-color); color: var(--primary-color); }
   .tl-alert .tl-dot { border-color: var(--bad); color: var(--bad); }
-  .tl-status .tl-dot, .tl-bin .tl-dot { color: var(--muted); }
+  .tl-status .tl-dot, .tl-bin .tl-dot, .tl-bury .tl-dot { color: var(--muted); }
+  .tl-bury .tl-text { color: var(--muted); font-size: .9em; } .tl-bury .tl-dot { width: 22px; height: 22px; justify-self: center; }
   .tl-text { min-width: 0; }
   .tl-w { font-weight: 500; font-variant-numeric: tabular-nums; }
 
@@ -1789,6 +1883,17 @@ const STYLE = `<style>
   .glabel { font-size: .8em; color: var(--muted); }
 
   /* cats */
+  .addrow { display: flex; justify-content: flex-end; gap: 14px; flex-wrap: wrap; }
+  .addrow.big { justify-content: flex-start; align-items: center; }
+  .addrow .btn { display: inline-flex; align-items: center; gap: 6px; }
+  .addrow ha-icon, .btn ha-icon { --mdc-icon-size: 18px; }
+  .addform { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: var(--soft); }
+  .addform label { display: flex; flex-direction: column; gap: 4px; font-size: .85em; color: var(--muted); }
+  .addform input { font: inherit; font-size: 1.1em; color: var(--primary-text-color); background: var(--card-background-color, #fff);
+    border: 1px solid var(--divider-color); border-radius: 10px; padding: 8px 10px; }
+  .addform label.color { flex-direction: row; align-items: center; justify-content: space-between; }
+  .addform input[type="color"] { width: 48px; height: 32px; padding: 2px; }
+  .addform .dlg-b { margin-top: 0; }
   .cat-grid { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 10px; }
   .cat-tile { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; background: var(--soft); min-width: 0; }
   .cat-tile.big { background: none; padding: 0; }
@@ -1845,11 +1950,11 @@ const STYLE = `<style>
 const define = (name, cls) => { if (!customElements.get(name)) customElements.define(name, cls); };
 const D = (cls) => cls.defaults;
 define("uahpet-litterbox-card", UahpetLitterboxCard);
-define("uahpet-litterbox-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD, bool("show_stats"), bool("show_cats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
+define("uahpet-litterbox-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD, bool("show_art"), bool("show_stats"), bool("show_cats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
 define("uahpet-litterbox-timeline-card", UahpetLitterboxTimelineCard);
 define("uahpet-litterbox-timeline-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD,
   choice(h, "range", ["today", "24h"], (v) => (v === "today" ? "timeline" : "last24")),
-  { name: "max_items", selector: { number: { min: 5, max: 50, mode: "box" } } }, bool("show_cleanings"), bool("show_alerts")], D(UahpetLitterboxTimelineCard)));
+  { name: "max_items", selector: { number: { min: 5, max: 50, mode: "box" } } }, bool("show_cleanings"), bool("show_burying"), bool("show_alerts")], D(UahpetLitterboxTimelineCard)));
 define("uahpet-litterbox-stats-card", UahpetLitterboxStatsCard);
 define("uahpet-litterbox-stats-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD,
   choice(h, "days", [7, 30]), choice(h, "metric", Object.keys(METRICS), (v) => `m_${v}`)], D(UahpetLitterboxStatsCard)));
@@ -1866,7 +1971,7 @@ const catNames = (hass, config) => catSource(hass, config?.device_id || litterDe
 define("uahpet-cats-card", UahpetCatsCard);
 define("uahpet-cats-card-editor", makeEditor((h, c) => [DEVICE_FIELD, TITLE_FIELD,
   { name: "cats", selector: { select: { multiple: true, mode: "list", options: catNames(h, c) } } },
-  { name: "columns", selector: { number: { min: 1, max: 4, mode: "box" } } }, { name: "layout", selector: { select: { mode: "dropdown", options: ["horizontal", "vertical"].map((v) => ({ value: v, label: t(h, `lay_${v}`) })) } } }, { name: "avatar_size", selector: { number: { min: 24, max: 200, step: 4, mode: "box", unit_of_measurement: "px" } } }, bool("show_photo"), bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatsCard)));
+  { name: "columns", selector: { number: { min: 1, max: 4, mode: "box" } } }, { name: "layout", selector: { select: { mode: "dropdown", options: ["horizontal", "vertical"].map((v) => ({ value: v, label: t(h, `lay_${v}`) })) } } }, { name: "avatar_size", selector: { number: { min: 24, max: 200, step: 4, mode: "box", unit_of_measurement: "px" } } }, bool("show_photo"), bool("show_weight"), bool("show_visits"), bool("show_last"), bool("show_add")], D(UahpetCatsCard)));
 define("uahpet-cat-card", UahpetCatCard);
 define("uahpet-cat-card-editor", makeEditor((h, c) => [DEVICE_FIELD,
   { name: "cat", selector: { select: { mode: "dropdown", options: catNames(h, c) } } }, { name: "layout", selector: { select: { mode: "dropdown", options: ["horizontal", "vertical"].map((v) => ({ value: v, label: t(h, `lay_${v}`) })) } } }, { name: "avatar_size", selector: { number: { min: 24, max: 200, step: 4, mode: "box", unit_of_measurement: "px" } } }, bool("show_photo"), bool("show_weight"), bool("show_visits"), bool("show_last")], D(UahpetCatCard)));

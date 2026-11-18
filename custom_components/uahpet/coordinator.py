@@ -37,6 +37,7 @@ from .const import (
     CONF_PROFILE,
     CONF_PROTOCOL,
     CONF_RECORD_UNIDENTIFIED,
+    PENDING_CATS,
     CONF_SMOOTHING,
     CONF_TOLERANCE,
     DOMAIN,
@@ -123,7 +124,9 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if "tracker" not in data:  # 0.2 stored the tracker alone
             data = {"tracker": data}
         if self.cats:
-            self.cats.load(data.get("cats"))
+            # cats imported while setting the litter box up (no stored state yet)
+            pending = self.hass.data.get(PENDING_CATS, {}).pop(self.device_id, None)
+            self.cats.load(data.get("cats") or pending)
         if self.tracker:
             self.tracker.load(data.get("tracker"))
             # Day counters roll over at midnight even without device updates.

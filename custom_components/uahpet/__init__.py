@@ -14,7 +14,7 @@ from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import config_validation as cv, device_registry as dr, entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_DEVICE_ID, DOMAIN
+from .const import CONF_CAT_COLOR, CONF_CAT_NAME, CONF_CAT_PICTURE, CONF_CAT_WEIGHT, CONF_CATS, CONF_DEVICE_ID, DOMAIN
 from .coordinator import UahpetConfigEntry, UahpetCoordinator
 from .cats import RECALIBRATE_SAMPLES
 from .frontend import async_register_cards
@@ -42,6 +42,25 @@ RECALIBRATE_SCHEMA = CAT_SCHEMA.extend({
     vol.Optional("samples", default=RECALIBRATE_SAMPLES): vol.All(vol.Coerce(int), vol.Range(min=1, max=20)),
 })
 CLEAR_SCHEMA = vol.Schema({vol.Optional(ENTRY): cv.string})
+ADD_CAT_SCHEMA = vol.Schema({
+    vol.Required("name"): cv.string,
+    vol.Required("weight"): vol.All(vol.Coerce(float), vol.Range(min=0.5, max=15)),
+    vol.Optional("color"): vol.Any(cv.string, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
+    vol.Optional("picture"): cv.string,
+    vol.Optional(ENTRY): cv.string,
+})
+
+
+def _rgb(value) -> list[int] | None:
+    """"#e15759" or [225, 87, 89] -> [225, 87, 89]."""
+    if not value:
+        return None
+    if isinstance(value, str):
+        v = value.strip().lstrip("#")
+        if len(v) != 6:
+            raise ServiceValidationError(f"Colour must look like #e15759, not {value}")
+        return [int(v[i:i + 2], 16) for i in (0, 2, 4)]
+    return [max(0, min(255, int(x))) for x in value]
 
 
 def _cat_coordinator(hass: HomeAssistant, call: ServiceCall) -> UahpetCoordinator:
@@ -81,6 +100,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.services.async_register(DOMAIN, "reassign_last_visit", _reassign, schema=CAT_SCHEMA)
     hass.services.async_register(DOMAIN, "recalibrate_weight", _recalibrate, schema=RECALIBRATE_SCHEMA)
     hass.services.async_register(DOMAIN, "clear_unidentified_visits", _clear, schema=CLEAR_SCHEMA)
+
+    async def _add_cat(call: ServiceCall) -> None:
+        """Add a cat profile (the litter box reloads with the new cat)."""
+        entries = [
+            e for e in hass.config_entries.async_entries(DOMAIN)
+            if e.state is ConfigEntryState.LOADED and e.runtime_data.profile.visit_data
+        ]
+        if entry_id := call.data.get(ENTRY):
+            entries = [e for e in entries if e.entry_id == entry_id]
+        if len(entries) != 1:
+            raise ServiceValidationError(
+                "Specify config_entry_id when more than one UAHPET litter box is set up" if entries else "No UAHPET litter box"
+            )
+        entry = entries[0]
+        name = call.data["name"].strip()
+        cats = list(entry.options.get(CONF_CATS, []))
+        if not name or name.casefold() in {c[CONF_CAT_NAME].casefold() for c in cats} | {"unidentified"}:
+            raise ServiceValidationError(f"Cat name already used or empty: {name!r}")
+        cats.append({
+            CONF_CAT_NAME: name, CONF_CAT_WEIGHT: float(call.data["weight"]),
+            CONF_CAT_PICTURE: (call.data.get("picture") or "").strip() or None, CONF_CAT_COLOR: _rgb(call.data.get("color")),
+        })
+        hass.config_entries.async_update_entry(entry, options={**entry.options, CONF_CATS: cats})
+
+    hass.services.async_register(DOMAIN, "add_cat", _add_cat, schema=ADD_CAT_SCHEMA)
     await async_register_static_path(hass)
     await async_register_cards(hass)
     return True
