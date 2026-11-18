@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.7.0";
+const VERSION = "0.8.0";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
@@ -96,7 +96,7 @@ const I18N = {
     purifier_not_found: "No Tuya air purifier found. Set it up in the Tuya integration first.",
     // editors
     ed_device_id: "Device", ed_title: "Title", ed_show_actions: "Show actions", ed_show_quick: "Show quick toggles",
-    ed_show_art: "Show the litter box drawing", ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
+    ed_show_art: "Show the litter box drawing", ed_art_style: "Drawing style", art_drum: "Drum (green dome)", art_cube: "Modern (steel box)", art_minimal: "Minimal (lines, theme colour)", art_cat: "Cat peeking out", ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
     ed_max_items: "Maximum entries", ed_show_cleanings: "Show cleanings", ed_show_alerts: "Show alerts",
     ed_days: "Days", ed_metric: "Default chart", ed_show_modes: "Show modes", ed_show_speed: "Show speed",
     ed_show_timer: "Show timer", ed_show_extras: "Show child lock and filter reset",
@@ -188,7 +188,7 @@ const I18N = {
     speed_sleep: "Noche", timer_cancel: "No",
     purifier_not_found: "No hay ningún purificador Tuya. Añádelo antes a la integración de Tuya.",
     ed_device_id: "Dispositivo", ed_title: "Título", ed_show_actions: "Mostrar acciones", ed_show_quick: "Mostrar interruptores rápidos",
-    ed_show_art: "Mostrar el dibujo del arenero", ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
+    ed_show_art: "Mostrar el dibujo del arenero", ed_art_style: "Estilo del dibujo", art_drum: "Tambor (cúpula verde)", art_cube: "Moderno (caja de acero)", art_minimal: "Minimalista (líneas, color del tema)", art_cat: "Gato asomando", ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
     ed_max_items: "Máximo de entradas", ed_show_cleanings: "Mostrar limpiezas", ed_show_alerts: "Mostrar avisos",
     ed_days: "Días", ed_metric: "Gráfica inicial", ed_show_modes: "Mostrar modos", ed_show_speed: "Mostrar velocidad",
     ed_show_timer: "Mostrar temporizador", ed_show_extras: "Mostrar bloqueo y reinicio del filtro",
@@ -505,25 +505,63 @@ class LitterCard extends UahpetCard {
 const BUSY = ["cleaning", "clearing", "leveling"];
 
 /** Drum litter box drawn in SVG; CSS animates it per status (class on the wrapper). */
-function boxArt(status, binState) {
+const ART_STYLES = ["drum", "cube", "minimal", "cat"];
+
+/** The opening of the litter box: rim, drum (turns while cleaning), litter (waves while levelling), grains. */
+function artOpening(cx, cy, R, r, rimClass = "rim") {
+  const y = cy + 16;
+  return `<circle class="${rimClass}" cx="${cx}" cy="${cy}" r="${R}"/>
+      <circle class="hole" cx="${cx}" cy="${cy}" r="${r}"/>
+      <g clip-path="url(#hole)">
+        <g class="drum" style="transform-origin:${cx}px ${cy}px"><circle cx="${cx}" cy="${cy}" r="${r - 6}"/></g>
+        <path class="litter wave" d="M${cx - 60} ${y} Q${cx - 45} ${y - 8} ${cx - 30} ${y} T${cx} ${y} T${cx + 30} ${y} T${cx + 60} ${y} T${cx + 90} ${y} V${cy + 50} H${cx - 60} Z"/>
+        <g class="grains"><circle cx="${cx - 8}" cy="${cy + 4}" r="2.4"/><circle cx="${cx + 4}" cy="${cy - 2}" r="2"/><circle cx="${cx + 10}" cy="${cy + 7}" r="2.4"/></g>
+      </g>`;
+}
+
+const ART_CAT = (dx = 0, dy = 0) => `<g class="cat" transform="translate(${dx} ${dy})"><path d="M160 74 l5 -14 l8 10 q5 -2 10 0 l8 -10 l5 14 q4 16 -18 18 q-22 -2 -18 -18z"/>
+        <circle class="eye" cx="171" cy="78" r="2"/><circle class="eye" cx="185" cy="78" r="2"/></g>`;
+const ART_PULSE = (cx, cy) => `<g class="pulse"><circle cx="${cx}" cy="${cy}" r="70" style="transform-origin:${cx}px ${cy}px"/><circle cx="${cx}" cy="${cy}" r="70" style="transform-origin:${cx}px ${cy}px"/></g>`;
+
+/** Litter box drawn in SVG, in one of ART_STYLES; CSS animates it per status (class on the wrapper). */
+function boxArt(status, binState, style = "drum") {
+  style = ART_STYLES.includes(style) ? style : "drum";
   const badge = { clumping: "mdi:timer-sand", e_weight: "mdi:alert", offline: "mdi:lan-disconnect" }[status];
-  return `<div class="art s-${esc(status)} ${binState === "bin_full" ? "bin-full" : ""}" aria-hidden="true">
-    <svg viewBox="0 0 200 150">
-      <defs><clipPath id="hole"><circle cx="100" cy="92" r="33"/></clipPath></defs>
-      <g class="pulse"><circle cx="100" cy="92" r="70"/><circle cx="100" cy="92" r="70"/></g>
+  let shape;
+  if (style === "cube") {
+    shape = `<defs><clipPath id="hole"><circle cx="100" cy="74" r="33"/></clipPath>
+        <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e3e8ec"/><stop offset=".55" stop-color="#b9c2ca"/><stop offset="1" stop-color="#8e99a4"/></linearGradient></defs>
+      ${ART_PULSE(100, 74)}
+      <rect class="body" x="34" y="12" width="132" height="114" rx="28" fill="url(#steel)"/>
+      <rect class="screen" x="74" y="22" width="52" height="9" rx="4.5"/><circle class="led" cx="117" cy="26.5" r="2.2"/>
+      ${artOpening(100, 74, 40, 33, "rim steel-rim")}
+      <rect class="base" x="42" y="122" width="116" height="14" rx="7"/>
+      ${ART_CAT(8, -14)}`;
+  } else if (style === "cat") {
+    shape = `<defs><clipPath id="hole"><circle cx="100" cy="88" r="36"/></clipPath></defs>
+      ${ART_PULSE(100, 88)}
+      <path class="dome" d="M20 120 A80 80 0 0 1 180 120 Z"/>
+      <rect class="base" x="14" y="112" width="172" height="28" rx="13"/><circle class="led" cx="100" cy="126" r="3.5"/>
+      ${artOpening(100, 88, 44, 36)}
+      <g class="peek" clip-path="url(#hole)">
+        <path class="peek-head" d="M74 124 C72 104 76 84 82 70 L94 82 Q100 80 106 82 L118 70 C124 84 128 104 126 124 Z"/>
+        <path class="peek-ear" d="M84 76 L91 84 L85 86 Z M116 76 L109 84 L115 86 Z"/>
+        <ellipse class="peek-eye" cx="91" cy="96" rx="3.4" ry="4.4"/><ellipse class="peek-eye" cx="109" cy="96" rx="3.4" ry="4.4"/>
+        <path class="peek-nose" d="M97 103 h6 l-3 3.5 z"/>
+        <path class="litter" d="M58 112 Q79 104 100 108 Q121 104 142 112 V140 H58 Z"/>
+      </g>
+      ${ART_CAT(6, -6)}`;
+  } else {  // drum and minimal share the shape; minimal is drawn with lines in the theme colour
+    shape = `<defs><clipPath id="hole"><circle cx="100" cy="92" r="33"/></clipPath></defs>
+      ${ART_PULSE(100, 92)}
       <path class="dome" d="M22 118 A78 78 0 0 1 178 118 Z"/>
       <rect class="base" x="16" y="112" width="168" height="28" rx="13"/>
       <circle class="led" cx="100" cy="126" r="3.5"/>
-      <circle class="rim" cx="100" cy="92" r="41"/>
-      <circle class="hole" cx="100" cy="92" r="33"/>
-      <g clip-path="url(#hole)">
-        <g class="drum"><circle cx="100" cy="92" r="27"/></g>
-        <path class="litter wave" d="M40 108 Q55 100 70 108 T100 108 T130 108 T160 108 T190 108 V140 H40 Z"/>
-        <g class="grains"><circle cx="92" cy="96" r="2.4"/><circle cx="104" cy="90" r="2"/><circle cx="110" cy="99" r="2.4"/></g>
-      </g>
-      <g class="cat"><path d="M160 74 l5 -14 l8 10 q5 -2 10 0 l8 -10 l5 14 q4 16 -18 18 q-22 -2 -18 -18z"/>
-        <circle class="eye" cx="171" cy="78" r="2"/><circle class="eye" cx="185" cy="78" r="2"/></g>
-    </svg>
+      ${artOpening(100, 92, 41, 33)}
+      ${ART_CAT()}`;
+  }
+  return `<div class="art v-${style} s-${esc(status)} ${binState === "bin_full" ? "bin-full" : ""}" aria-hidden="true">
+    <svg viewBox="0 0 200 150">${shape}</svg>
     ${badge ? `<span class="art-badge"><ha-icon icon="${badge}"></ha-icon></span>` : ""}
   </div>`;
 }
@@ -541,7 +579,7 @@ const ALERT_ICONS = {
 };
 
 class UahpetLitterboxCard extends LitterCard {
-  static defaults = { show_art: true, show_stats: true, show_cats: true, show_actions: true, show_quick: true };
+  static defaults = { show_art: true, art_style: "drum", show_stats: true, show_cats: true, show_actions: true, show_quick: true };
   static getConfigElement() { return document.createElement("uahpet-litterbox-card-editor"); }
 
   extraKey() {
@@ -615,7 +653,7 @@ class UahpetLitterboxCard extends LitterCard {
 
     return `
       <div class="hero ${c.show_art ? "" : "no-art"}">
-        ${c.show_art ? boxArt(status, bin?.state) : ""}
+        ${c.show_art ? boxArt(status, bin?.state, c.art_style) : ""}
         <div class="hero-text">
           <div class="title">${esc(this.cardTitle("c_main"))}</div>
           <button class="status ${STATUS_TONE[status] || "ok"}" data-act="info" data-key="work_status">${esc(t(h, this.burying() ? "st_burying" : `st_${status}`))}</button>
@@ -1769,11 +1807,22 @@ const STYLE = `<style>
   .hole { fill: var(--box-hole); } .litter { fill: var(--box-litter); } .led { fill: #a8f2d6; }
   .drum circle { fill: none; stroke: rgba(255,255,255,.28); stroke-width: 3; stroke-dasharray: 7 9; }
   .drum, .grains, .wave { transform-box: view-box; }
-  .drum { transform-origin: 100px 92px; }
+  /* cube: brushed steel; cat: a cat peeking out, hidden while the drum turns; minimal: lines in the theme colour */
+  .screen { fill: #2b3138; } .steel-rim { fill: #f1f4f6; } .v-cube .base { fill: #6e7a86; }
+  .peek-head { fill: #f7f1e7; } .peek-ear { fill: #f3b8b0; } .peek-eye { fill: var(--box-hole); } .peek-nose { fill: #e58f86; }
+  .peek { transition: opacity .3s; } .art.s-cleaning .peek, .art.s-clearing .peek, .art.s-leveling .peek { opacity: 0; }
+  .v-cat .drum circle { stroke: rgba(255,255,255,.18); }
+  .v-minimal .dome, .v-minimal .base, .v-minimal .rim { fill: none; stroke: var(--primary-color); stroke-width: 3; }
+  .v-minimal .hole { fill: color-mix(in srgb, var(--primary-color) 10%, transparent); }
+  .v-minimal .litter { fill: color-mix(in srgb, var(--primary-color) 32%, transparent); }
+  .v-minimal .drum circle { stroke: var(--primary-color); opacity: .55; }
+  .v-minimal .led { fill: var(--primary-color); } .v-minimal .cat path { fill: var(--primary-color); opacity: 1; }
+  .v-minimal .grains circle { fill: var(--primary-color); }
+  .art.v-minimal.bin-full .base { fill: none; stroke: var(--bad); }
   .grains circle { fill: var(--box-litter); opacity: 0; }
   .cat path { fill: var(--primary-text-color); opacity: .75; } .cat .eye { fill: var(--card-background-color, #fff); }
   .cat { opacity: 0; transition: opacity .3s; }
-  .pulse circle { fill: none; stroke: var(--warn); stroke-width: 2; opacity: 0; transform-origin: 100px 92px; transform-box: view-box; }
+  .pulse circle { fill: none; stroke: var(--warn); stroke-width: 2; opacity: 0; transform-box: view-box; }
   .art.bin-full .base { fill: var(--bad); }
   .art.s-offline { filter: grayscale(1); opacity: .55; }
   .art.s-cleaning .drum { animation: spin 3s linear infinite; }
@@ -2000,7 +2049,7 @@ const STYLE = `<style>
 const define = (name, cls) => { if (!customElements.get(name)) customElements.define(name, cls); };
 const D = (cls) => cls.defaults;
 define("uahpet-litterbox-card", UahpetLitterboxCard);
-define("uahpet-litterbox-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD, bool("show_art"), bool("show_stats"), bool("show_cats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
+define("uahpet-litterbox-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, bool("show_art"), choice(h, "art_style", ART_STYLES, (v) => `art_${v}`), bool("show_stats"), bool("show_cats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
 define("uahpet-litterbox-timeline-card", UahpetLitterboxTimelineCard);
 define("uahpet-litterbox-timeline-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD,
   choice(h, "range", ["today", "24h"], (v) => (v === "today" ? "timeline" : "last24")),
