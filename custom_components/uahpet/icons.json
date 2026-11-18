@@ -24,6 +24,9 @@
       },
       "motor_fault": {
         "default": "mdi:engine-off-outline"
+      },
+      "cat_health": {
+        "default": "mdi:heart-pulse"
       }
     },
     "button": {
@@ -38,6 +41,12 @@
       },
       "stop": {
         "default": "mdi:stop-circle-outline"
+      },
+      "recalibrate": {
+        "default": "mdi:scale-balance"
+      },
+      "clear_unidentified": {
+        "default": "mdi:broom"
       }
     },
     "number": {
@@ -157,12 +166,29 @@
       },
       "developer_mode": {
         "default": "mdi:wrench-outline"
+      },
+      "show_unidentified": {
+        "default": "mdi:eye-outline",
+        "state": {
+          "off": "mdi:eye-off-outline"
+        }
       }
     },
     "event": {
       "visit": {
         "default": "mdi:paw"
       }
+    }
+  },
+  "services": {
+    "reassign_last_visit": {
+      "service": "mdi:cat"
+    },
+    "recalibrate_weight": {
+      "service": "mdi:scale-balance"
+    },
+    "clear_unidentified_visits": {
+      "service": "mdi:broom"
     }
   }
 }

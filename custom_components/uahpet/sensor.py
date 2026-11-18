@@ -37,7 +37,7 @@ async def async_setup_entry(
 
 def cat_unique_suffixes(name: str) -> list[str]:
     """unique_id suffixes of a cat's entities (kept in sync with the classes below)."""
-    return [f"cat_{slugify(name)}_{part}" for part in ("weight", "visits_today", "last_visit")]
+    return [f"cat_{slugify(name)}_{part}" for part in ("weight", "visits_today", "last_visit", "health", "recalibrate")]
 
 
 class UahpetSensor(UahpetEntity, SensorEntity):

@@ -69,6 +69,9 @@
       },
       "motor_fault": {
         "name": "Motor fault"
+      },
+      "cat_health": {
+        "name": "{cat} health"
       }
     },
     "button": {
@@ -83,6 +86,12 @@
       },
       "stop": {
         "name": "Stop"
+      },
+      "recalibrate": {
+        "name": "Recalibrate {cat} weight"
+      },
+      "clear_unidentified": {
+        "name": "Clear unidentified visits"
       }
     },
     "number": {
@@ -223,6 +232,9 @@
       },
       "developer_mode": {
         "name": "Developer mode"
+      },
+      "show_unidentified": {
+        "name": "Show unidentified visits"
       }
     },
     "event": {
@@ -247,7 +259,9 @@
           "add_cat": "Add a cat",
           "edit_cat": "Edit a cat",
           "remove_cat": "Remove a cat",
-          "identification": "Identification settings"
+          "identification": "Identification settings",
+          "notifications": "Notifications",
+          "import_lci": "Import from Litter Cat Identifier"
         }
       },
       "add_cat": {
@@ -256,8 +270,16 @@
         "data": {
           "name": "Name",
           "weight": "Approximate weight",
-          "picture": "Photo (URL or /local/… path, optional)",
-          "color": "Colour (charts and icon, optional)"
+          "picture": "…or a URL / path",
+          "color": "Colour (charts and icon, optional)",
+          "picture_media": "Photo",
+          "remove_picture": "Remove the photo",
+          "notify_visit": "Notify every visit",
+          "alert_hours": "Alert after this many hours without a visit (0 = off)"
+        },
+        "data_description": {
+          "picture_media": "Pick a photo from Media or upload one from your phone or computer. It's cropped square and resized.",
+          "picture": "e.g. /local/cats/luna.jpg or https://…"
         }
       },
       "edit_cat": {
@@ -271,8 +293,16 @@
         "description": "Changing the weight resets what was learned for {cat}.",
         "data": {
           "weight": "Approximate weight",
-          "picture": "Photo (URL or /local/… path, optional)",
-          "color": "Colour (charts and icon, optional)"
+          "picture": "…or a URL / path",
+          "color": "Colour (charts and icon, optional)",
+          "picture_media": "Photo",
+          "remove_picture": "Remove the photo",
+          "notify_visit": "Notify every visit",
+          "alert_hours": "Alert after this many hours without a visit (0 = off)"
+        },
+        "data_description": {
+          "picture_media": "Pick a photo from Media or upload one from your phone or computer. It's cropped square and resized.",
+          "picture": "e.g. /local/cats/luna.jpg or https://…"
         }
       },
       "remove_cat": {
@@ -286,18 +316,90 @@
         "data": {
           "tolerance": "Max difference from a cat's weight",
           "smoothing": "Learning rate",
-          "min_weight": "Ignore readings below"
+          "min_weight": "Ignore readings below",
+          "record_unidentified": "Record unidentified visits"
         },
         "data_description": {
           "tolerance": "Visits further than this from every cat are logged as unidentified.",
           "smoothing": "How much each visit moves the learned weight (0 = never, 1 = jump to the latest reading).",
-          "min_weight": "Filters out empty-box readings and noise."
+          "min_weight": "Filters out empty-box readings and noise.",
+          "record_unidentified": "Off: visits that don't match any cat are ignored completely (no log, count or notification)."
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Sent with the services you pick (photo attached on the mobile app).",
+        "data": {
+          "notify_targets": "Send notifications to",
+          "notify_unidentified": "Notify unidentified visits",
+          "notify_health": "Health alerts"
+        },
+        "data_description": {
+          "notify_targets": "Notify services, e.g. notify.mobile_app_my_phone.",
+          "notify_health": "A cat visits much more than usual, stays far longer than usual, or loses 5 % of its weight in three weeks."
+        }
+      },
+      "import_lci": {
+        "title": "Import from Litter Cat Identifier",
+        "description": "Copies the cats (learned weights, photos, colours, notifications), the settings and the whole visit history. UAHPET's current cats are replaced. Litter Cat Identifier is not changed: remove it afterwards if you only want UAHPET.",
+        "data": {
+          "lci_entry": "Litter box in Litter Cat Identifier"
         }
       }
     },
     "error": {
       "invalid_name": "Name cannot be empty.",
-      "duplicate_name": "That name is already used."
+      "duplicate_name": "That name is already used.",
+      "invalid_image": "That file isn't an image Home Assistant can read.",
+      "not_local": "That media source can't be used; pick or upload the photo in Image upload or My media."
+    }
+  },
+  "services": {
+    "reassign_last_visit": {
+      "name": "Reassign last visit",
+      "description": "Fix the most recent visit when it was given to the wrong cat (or left unidentified).",
+      "fields": {
+        "cat": {
+          "name": "Cat",
+          "description": "Name of the cat that really used the litter box."
+        },
+        "config_entry_id": {
+          "name": "Litter box",
+          "description": "Only needed with more than one UAHPET litter box with cats."
+        }
+      }
+    },
+    "recalibrate_weight": {
+      "name": "Recalibrate weight",
+      "description": "Reset a cat's learned weight to a value, or to the median of its latest readings.",
+      "fields": {
+        "cat": {
+          "name": "Cat",
+          "description": "Name of the cat."
+        },
+        "weight": {
+          "name": "Weight",
+          "description": "New weight. Leave empty to use the latest readings."
+        },
+        "samples": {
+          "name": "Readings",
+          "description": "How many of the latest readings to use."
+        },
+        "config_entry_id": {
+          "name": "Litter box",
+          "description": "Only needed with more than one UAHPET litter box with cats."
+        }
+      }
+    },
+    "clear_unidentified_visits": {
+      "name": "Clear unidentified visits",
+      "description": "Remove unidentified visits from the log and reset today's count.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Litter box",
+          "description": "Only needed with more than one UAHPET litter box with cats."
+        }
+      }
     }
   }
 }

@@ -153,11 +153,22 @@ Full example: [examples/dashboard.yaml](examples/dashboard.yaml).
 
 ## Cats
 
-UAHPET can tell your cats apart on its own, like the UAHPET app: **UAHPET → Configure** → *Add a cat* (name, approximate weight, optional photo and colour). Each visit is then named after the cat with the closest weight; the weight is learned over time (*Identification settings*: tolerance, learning rate, minimum weight).
+UAHPET can tell your cats apart on its own, like the UAHPET app: **UAHPET → Configure**:
 
-Per cat: *{cat} weight* (learned), *{cat} visits today*, *{cat} last visit*. Plus *Last visit* (cat, weight, duration, why a visit was not identified, last 20 visits) and *Unidentified visits today*. The *Visit* event gets a `cat` attribute. The whole visit history (up to 2000) is available through the websocket command `uahpet/visits`.
+| Menu | What it does |
+|---|---|
+| *Add a cat* / *Edit a cat* | Name, approximate weight (then learned visit after visit), **photo** (pick or upload it from Media, or a URL / `/local/` path), **colour** (charts, icon without photo), notify every visit, alert after N hours without a visit |
+| *Identification settings* | Tolerance, learning rate, minimum weight, record unidentified visits or not |
+| *Notifications* | Notify services (e.g. `notify.mobile_app_my_phone`, photo attached), unidentified visits, health alerts |
+| *Import from Litter Cat Identifier* | Copies cats, learned weights, photos, colours, notifications, settings and the whole visit history. Afterwards Litter Cat Identifier can be removed |
 
-The colour picked for a cat is used by every card (bars, icon when there is no photo). A card can still override it in YAML: `colors: {Luna: "#e15759"}`.
+Entities per cat: *{cat} weight* (learned), *{cat} visits today*, *{cat} last visit*, *{cat} health* (binary sensor, attribute `reasons`: `frequent_visits`, `long_visit`, `weight_loss`), *Recalibrate {cat} weight* (button). Plus *Last visit* (cat, weight, duration, why a visit was not identified, last 20 visits), *Unidentified visits today*, *Show unidentified visits* (switch, for the cards) and *Clear unidentified visits* (button). The *Visit* event gets a `cat` attribute. The whole visit history (up to 2000) is available through the websocket command `uahpet/visits`.
+
+Health alerts compare each cat with itself: many more visits than usual, a much longer visit than usual, or 5 % of weight lost in three weeks. They need about a week of history first. Not medical advice.
+
+Services: `uahpet.reassign_last_visit` (fix the last visit's cat), `uahpet.recalibrate_weight` (to a value or the median of the latest readings), `uahpet.clear_unidentified_visits`.
+
+The colour picked for a cat is used by every card. A card can still override it in YAML: `colors: {Luna: "#e15759"}`.
 
 ## Telling cats apart with Litter Cat Identifier
 

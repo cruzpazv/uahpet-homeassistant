@@ -69,6 +69,9 @@
       },
       "motor_fault": {
         "name": "Fallo del motor"
+      },
+      "cat_health": {
+        "name": "Salud de {cat}"
       }
     },
     "button": {
@@ -83,6 +86,12 @@
       },
       "stop": {
         "name": "Detener"
+      },
+      "recalibrate": {
+        "name": "Recalibrar peso de {cat}"
+      },
+      "clear_unidentified": {
+        "name": "Borrar visitas sin identificar"
       }
     },
     "number": {
@@ -223,6 +232,9 @@
       },
       "developer_mode": {
         "name": "Modo desarrollador"
+      },
+      "show_unidentified": {
+        "name": "Mostrar visitas sin identificar"
       }
     },
     "event": {
@@ -247,7 +259,9 @@
           "add_cat": "Añadir un gato",
           "edit_cat": "Editar un gato",
           "remove_cat": "Quitar un gato",
-          "identification": "Ajustes de identificación"
+          "identification": "Ajustes de identificación",
+          "notifications": "Notificaciones",
+          "import_lci": "Importar desde Litter Cat Identifier"
         }
       },
       "add_cat": {
@@ -256,8 +270,16 @@
         "data": {
           "name": "Nombre",
           "weight": "Peso aproximado",
-          "picture": "Foto (URL o ruta /local/…, opcional)",
-          "color": "Color (gráficas e icono, opcional)"
+          "picture": "…o una URL / ruta",
+          "color": "Color (gráficas e icono, opcional)",
+          "picture_media": "Foto",
+          "remove_picture": "Quitar la foto",
+          "notify_visit": "Avisar de cada visita",
+          "alert_hours": "Avisar tras estas horas sin visita (0 = no)"
+        },
+        "data_description": {
+          "picture_media": "Elige una foto de Multimedia o súbela desde el móvil o el ordenador. Se recorta cuadrada y se reduce.",
+          "picture": "p. ej. /local/gatos/luna.jpg o https://…"
         }
       },
       "edit_cat": {
@@ -271,8 +293,16 @@
         "description": "Cambiar el peso reinicia lo aprendido para {cat}.",
         "data": {
           "weight": "Peso aproximado",
-          "picture": "Foto (URL o ruta /local/…, opcional)",
-          "color": "Color (gráficas e icono, opcional)"
+          "picture": "…o una URL / ruta",
+          "color": "Color (gráficas e icono, opcional)",
+          "picture_media": "Foto",
+          "remove_picture": "Quitar la foto",
+          "notify_visit": "Avisar de cada visita",
+          "alert_hours": "Avisar tras estas horas sin visita (0 = no)"
+        },
+        "data_description": {
+          "picture_media": "Elige una foto de Multimedia o súbela desde el móvil o el ordenador. Se recorta cuadrada y se reduce.",
+          "picture": "p. ej. /local/gatos/luna.jpg o https://…"
         }
       },
       "remove_cat": {
@@ -286,18 +316,90 @@
         "data": {
           "tolerance": "Diferencia máxima con el peso de un gato",
           "smoothing": "Ritmo de aprendizaje",
-          "min_weight": "Ignorar lecturas por debajo de"
+          "min_weight": "Ignorar lecturas por debajo de",
+          "record_unidentified": "Registrar visitas sin identificar"
         },
         "data_description": {
           "tolerance": "Las visitas más alejadas que esto de todos los gatos se registran como no identificadas.",
           "smoothing": "Cuánto mueve cada visita el peso aprendido (0 = nunca, 1 = salta a la última lectura).",
-          "min_weight": "Descarta lecturas con el arenero vacío y ruido."
+          "min_weight": "Descarta lecturas con el arenero vacío y ruido.",
+          "record_unidentified": "Desactivado: las visitas que no coinciden con ningún gato se ignoran por completo (sin registro, cuenta ni aviso)."
+        }
+      },
+      "notifications": {
+        "title": "Notificaciones",
+        "description": "Se envían con los servicios que elijas (con foto en la app móvil).",
+        "data": {
+          "notify_targets": "Enviar notificaciones a",
+          "notify_unidentified": "Avisar de visitas sin identificar",
+          "notify_health": "Avisos de salud"
+        },
+        "data_description": {
+          "notify_targets": "Servicios de notificación, p. ej. notify.mobile_app_mi_movil.",
+          "notify_health": "Un gato va mucho más de lo habitual, se queda mucho más tiempo o pierde un 5 % de peso en tres semanas."
+        }
+      },
+      "import_lci": {
+        "title": "Importar desde Litter Cat Identifier",
+        "description": "Copia los gatos (pesos aprendidos, fotos, colores, avisos), los ajustes y todo el historial de visitas. Sustituye a los gatos actuales de UAHPET. Litter Cat Identifier no se modifica: puedes quitarlo después si solo quieres UAHPET.",
+        "data": {
+          "lci_entry": "Arenero en Litter Cat Identifier"
         }
       }
     },
     "error": {
       "invalid_name": "El nombre no puede estar vacío.",
-      "duplicate_name": "Ese nombre ya está en uso."
+      "duplicate_name": "Ese nombre ya está en uso.",
+      "invalid_image": "Ese archivo no es una imagen que Home Assistant pueda leer.",
+      "not_local": "Ese origen multimedia no se puede usar; elige o sube la foto en Subida de imágenes o Mis medios."
+    }
+  },
+  "services": {
+    "reassign_last_visit": {
+      "name": "Reasignar última visita",
+      "description": "Corrige la visita más reciente cuando se asignó al gato equivocado (o quedó sin identificar).",
+      "fields": {
+        "cat": {
+          "name": "Gato",
+          "description": "Nombre del gato que usó de verdad el arenero."
+        },
+        "config_entry_id": {
+          "name": "Arenero",
+          "description": "Solo hace falta con más de un arenero UAHPET con gatos."
+        }
+      }
+    },
+    "recalibrate_weight": {
+      "name": "Recalibrar peso",
+      "description": "Pone el peso aprendido de un gato en un valor, o en la mediana de sus últimas lecturas.",
+      "fields": {
+        "cat": {
+          "name": "Gato",
+          "description": "Nombre del gato."
+        },
+        "weight": {
+          "name": "Peso",
+          "description": "Peso nuevo. Vacío para usar las últimas lecturas."
+        },
+        "samples": {
+          "name": "Lecturas",
+          "description": "Cuántas de las últimas lecturas usar."
+        },
+        "config_entry_id": {
+          "name": "Arenero",
+          "description": "Solo hace falta con más de un arenero UAHPET con gatos."
+        }
+      }
+    },
+    "clear_unidentified_visits": {
+      "name": "Borrar visitas sin identificar",
+      "description": "Quita del registro las visitas sin identificar y pone a cero la cuenta de hoy.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Arenero",
+          "description": "Solo hace falta con más de un arenero UAHPET con gatos."
+        }
+      }
     }
   }
 }

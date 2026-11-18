@@ -13,6 +13,9 @@ const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_vis
 const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", cancel: "Cancel", confirm_btn: "Continue",
+    hide_unk: "Hide unidentified", show_unk: "Show unidentified ({n})", clear_unk: "Clear unidentified",
+    dlg_clear_t: "Clear unidentified visits?", dlg_clear: "They are removed from the log and today's count is reset.", dlg_clear_ok: "Clear",
+    ed_show_toggle: "Show hide / clear buttons",
     stop: "Stop", dlg_empty_ok: "Empty", cats: "Cats", today_n: "{n} today", last_at: "last {t}", never: "no visits yet",
     visits_card: "Recent visits", th_time: "Time", th_cat: "Cat", th_weight: "Weight", th_duration: "Duration",
     more: "Show more", less: "Show less", all_hist: "Whole history", chart: "Visits per day", last_days: "Last {n} days (tap a day for details)",
@@ -98,6 +101,9 @@ const I18N = {
   },
   es: {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", cancel: "Cancelar", confirm_btn: "Continuar",
+    hide_unk: "Ocultar sin identificar", show_unk: "Mostrar sin identificar ({n})", clear_unk: "Borrar sin identificar",
+    dlg_clear_t: "¿Borrar las visitas sin identificar?", dlg_clear: "Se quitan del registro y se pone a cero la cuenta de hoy.", dlg_clear_ok: "Borrar",
+    ed_show_toggle: "Mostrar botones de ocultar / borrar",
     stop: "Detener", dlg_empty_ok: "Vaciar", cats: "Gatos", today_n: "{n} hoy", last_at: "última {t}", never: "sin visitas",
     visits_card: "Últimas visitas", th_time: "Hora", th_cat: "Gato", th_weight: "Peso", th_duration: "Duración",
     more: "Ver más", less: "Ver menos", all_hist: "Todo el historial", chart: "Visitas por día", last_days: "Últimos {n} días (toca un día para ver el detalle)",
@@ -241,15 +247,17 @@ function entityMap(hass, deviceId) {
 
 function collectCats(hass, ents) {
   const cats = {};
-  let lastVisit = null, unidentified = null, device = null;
+  let lastVisit = null, unidentified = null, device = null, showSwitch = null, clearButton = null;
   for (const e of ents) {
     if (e.translation_key === "last_visit") { lastVisit = e.entity_id; device = e.device_id; }
     else if (e.translation_key === "unidentified_today") unidentified = e.entity_id;
+    else if (e.translation_key === "show_unidentified") showSwitch = e.entity_id;
+    else if (e.translation_key === "clear_unidentified" && e.entity_id.startsWith("button.")) clearButton = e.entity_id;
     const field = CAT_FIELDS[e.translation_key];
     const name = field && hass.states[e.entity_id]?.attributes?.cat;
     if (name) (cats[name] ||= { name })[field] = e.entity_id;
   }
-  return { cats: Object.values(cats), lastVisit, unidentified, device };
+  return { cats: Object.values(cats), lastVisit, unidentified, device, showSwitch, clearButton };
 }
 
 /** Cats of a litter box: UAHPET's own cat profiles, otherwise Litter Cat Identifier.
@@ -263,7 +271,7 @@ function catSource(hass, litterDevice) {
   return null;
 }
 
-const catIds = (src) => (src ? src.cats.flatMap((c) => [c.weight, c.visits, c.last, c.health]).concat(src.lastVisit, src.unidentified).filter(Boolean) : []);
+const catIds = (src) => (src ? src.cats.flatMap((c) => [c.weight, c.visits, c.last, c.health]).concat(src.lastVisit, src.unidentified, src.showSwitch).filter(Boolean) : []);
 const catPicture = (hass, cat) => hass.states[cat.weight]?.attributes?.entity_picture;
 /** Card option `colors: {Name: "#hex"}` first, then the colour picked for the cat, then the palette. */
 const catColor = (hass, cat, i, config) => config?.colors?.[cat.name] || hass.states[cat.weight]?.attributes?.color || PALETTE[i % PALETTE.length];
@@ -1072,7 +1080,7 @@ class UahpetCatCard extends CatCardBase {
 }
 
 class UahpetVisitsCard extends CatCardBase {
-  static defaults = { count: 8, collapsible: false, expanded_count: 20, show_weight: true, show_duration: true, show_unidentified: true };
+  static defaults = { count: 8, collapsible: false, expanded_count: 20, show_weight: true, show_duration: true, show_unidentified: true, show_toggle: true };
   static getConfigElement() { return document.createElement("uahpet-visits-card-editor"); }
   static getStubConfig() { return { count: 8 }; }
 
@@ -1087,8 +1095,12 @@ class UahpetVisitsCard extends CatCardBase {
   }
 
   handle(act, key, val) {
+    const h = this._hass, src = this._src;
     if (act === "mode") this._mode = val;
-    else super.handle(act, key, val);
+    else if (act === "unk-toggle" && src?.showSwitch) h.callService("switch", "toggle", { entity_id: src.showSwitch });
+    else if (act === "unk-clear" && src?.clearButton) {
+      this._ask(t(h, "dlg_clear_t"), t(h, "dlg_clear"), () => h.callService("button", "press", { entity_id: src.clearButton }), t(h, "dlg_clear_ok"));
+    } else super.handle(act, key, val);
   }
 
   async _fetch(limit, key) {
@@ -1116,8 +1128,14 @@ class UahpetVisitsCard extends CatCardBase {
       if (this._fullKey === key && this._full) all = this._full;
       else { loading = true; if (this._fullKey !== key) this._fetch(wanted, key); }
     }
-    const visits = c.show_unidentified ? all : all.filter((v) => v.cat !== "unidentified");
-    if (!visits.length) return `${head}<div class="empty">${esc(t(h, "no_events"))}</div>`;
+    // card option and the integration's "show unidentified visits" switch must both allow them
+    const hiding = h.states[this._src.showSwitch]?.state === "off";
+    const visits = c.show_unidentified && !hiding ? all : all.filter((v) => v.cat !== "unidentified");
+    const unk = all.filter((v) => v.cat === "unidentified").length;
+    const tools = c.show_toggle && (unk || hiding) ? `<div class="tools">
+      ${this._src.showSwitch ? `<button class="link" data-act="unk-toggle"><ha-icon icon="${hiding ? "mdi:eye-outline" : "mdi:eye-off-outline"}"></ha-icon>${esc(hiding ? t(h, "show_unk", { n: unk }) : t(h, "hide_unk"))}</button>` : ""}
+      ${this._src.clearButton && unk ? `<button class="link" data-act="unk-clear"><ha-icon icon="mdi:broom"></ha-icon>${esc(t(h, "clear_unk"))}</button>` : ""}</div>` : "";
+    if (!visits.length) return `${head}${tools}<div class="empty">${esc(t(h, "no_events"))}</div>`;
     const shown = visits.slice(0, wanted);
     const rows = shown.map((v) => {
       const d = new Date(v.time);
@@ -1144,7 +1162,7 @@ class UahpetVisitsCard extends CatCardBase {
       if (mode !== "collapsed") btns.push(btn("collapsed", "mdi:chevron-up", t(h, "less")));
       foot = btns.length ? `<div class="foot">${btns.join("")}</div>` : "";
     }
-    return `${head}<div class="tbl ${shown.length > 20 ? "scroll" : ""}"><table>${th}${rows}</table></div>${foot}`;
+    return `${head}${tools}<div class="tbl ${shown.length > 20 ? "scroll" : ""}"><table>${th}${rows}</table></div>${foot}`;
   }
 }
 
@@ -1606,6 +1624,7 @@ const STYLE = `<style>
   .tbl .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .tbl .when { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
   .unk { color: var(--muted); } .why { display: block; font-size: .8em; color: var(--muted); }
+  .tools { display: flex; justify-content: flex-end; gap: 14px; flex-wrap: wrap; margin-top: -6px; }
   .foot { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; }
   .link { display: inline-flex; align-items: center; gap: 4px; color: var(--primary-color); font-size: .9em; }
   .link ha-icon { --mdc-icon-size: 18px; }
@@ -1659,7 +1678,7 @@ define("uahpet-visits-card", UahpetVisitsCard);
 define("uahpet-visits-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD,
   { name: "count", selector: { number: { min: 1, max: 50, mode: "box" } } }, bool("collapsible"),
   { name: "expanded_count", selector: { number: { min: 5, max: 500, mode: "box" } } },
-  bool("show_weight"), bool("show_duration"), bool("show_unidentified")], D(UahpetVisitsCard)));
+  bool("show_weight"), bool("show_duration"), bool("show_unidentified"), bool("show_toggle")], D(UahpetVisitsCard)));
 define("uahpet-visits-chart-card", UahpetVisitsChartCard);
 define("uahpet-visits-chart-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, choice(h, "days", [7, 30]), bool("show_unidentified")], D(UahpetVisitsChartCard)));
 define("uahpet-litterbox-maintenance-mini-card", UahpetMaintenanceMiniCard);

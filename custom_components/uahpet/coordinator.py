@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 import logging
 import time
 from typing import Any
@@ -12,7 +13,7 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later, async_track_time_change
+from homeassistant.helpers.event import async_call_later, async_track_time_change, async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -20,20 +21,27 @@ from homeassistant.util import dt as dt_util
 from .cats import DEFAULT_MIN_WEIGHT, DEFAULT_SMOOTHING, DEFAULT_TOLERANCE, CatIdentifier
 from .client import UahpetClient
 from .const import (
+    CONF_CAT_ALERT_HOURS,
     CONF_CAT_COLOR,
     CONF_CAT_NAME,
+    CONF_CAT_NOTIFY_VISIT,
     CONF_CAT_PICTURE,
     CONF_CAT_WEIGHT,
     CONF_CATS,
     CONF_DEVICE_ID,
     CONF_LOCAL_KEY,
     CONF_MIN_WEIGHT,
+    CONF_NOTIFY_HEALTH,
+    CONF_NOTIFY_TARGETS,
+    CONF_NOTIFY_UNIDENTIFIED,
     CONF_PROFILE,
     CONF_PROTOCOL,
+    CONF_RECORD_UNIDENTIFIED,
     CONF_SMOOTHING,
     CONF_TOLERANCE,
     DOMAIN,
 )
+from .messages import text
 from .profiles import PROFILES_BY_KEY
 
 _LOGGER = logging.getLogger(__name__)
@@ -85,12 +93,15 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "weight": float(c[CONF_CAT_WEIGHT]),
                     "picture": c.get(CONF_CAT_PICTURE) or None,
                     "color": "#{:02x}{:02x}{:02x}".format(*c[CONF_CAT_COLOR]) if c.get(CONF_CAT_COLOR) else None,
+                    "notify_visit": bool(c.get(CONF_CAT_NOTIFY_VISIT, False)),
+                    "alert_hours": float(c.get(CONF_CAT_ALERT_HOURS) or 0),
                 }
                 for c in options.get(CONF_CATS, [])
             },
             tolerance=float(options.get(CONF_TOLERANCE, DEFAULT_TOLERANCE)),
             smoothing=float(options.get(CONF_SMOOTHING, DEFAULT_SMOOTHING)),
             min_weight=float(options.get(CONF_MIN_WEIGHT, DEFAULT_MIN_WEIGHT)),
+            record_unidentified=bool(options.get(CONF_RECORD_UNIDENTIFIED, True)),
         )
 
     def _as_dict(self) -> dict[str, Any]:
@@ -119,9 +130,76 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.config_entry.async_on_unload(
                 async_track_time_change(self.hass, self._on_midnight, hour=0, minute=0, second=1)
             )
+        if self.cats and any(p["alert_hours"] for p in self.cats.profiles.values()):
+            self.config_entry.async_on_unload(
+                async_track_time_interval(self.hass, self._check_inactivity, timedelta(minutes=10))
+            )
 
     @callback
     def _on_midnight(self, _now: Any) -> None:
+        if self.cats and self.cats.profiles:
+            self._notify_health(self.cats.roll(dt_util.now()))
+            self._save()
+        self.async_update_listeners()
+
+    # ---------- cat profiles: notifications and corrections ----------
+
+    @callback
+    def _send(self, message: str, picture: str | None = None) -> None:
+        targets = self.options.get(CONF_NOTIFY_TARGETS) or []
+        if targets:
+            self.config_entry.async_create_background_task(
+                self.hass, self._async_send(targets, message, picture), f"{DOMAIN}_notify"
+            )
+
+    async def _async_send(self, targets: list[str], message: str, picture: str | None) -> None:
+        for target in targets:
+            domain, _, service = target.partition(".")
+            if not self.hass.services.has_service(domain, service):
+                _LOGGER.warning("Notify service %s not found", target)
+                continue
+            data: dict[str, Any] = {"title": f"🐈 {self.config_entry.title}", "message": message}
+            if picture and service.startswith("mobile_app_"):
+                data["data"] = {"image": picture}
+            try:
+                await self.hass.services.async_call(domain, service, data, blocking=True)
+            except Exception:  # noqa: BLE001 - one bad target must not stop the others
+                _LOGGER.exception("Failed to notify %s", target)
+
+    def _picture(self, cat: str | None) -> str | None:
+        return (self.cats.profiles.get(cat) or {}).get("picture") if self.cats and cat else None
+
+    @callback
+    def _notify_health(self, alerts: list[tuple[str, str, Any]]) -> None:
+        if self.options.get(CONF_NOTIFY_HEALTH, True):
+            lang = self.hass.config.language
+            for cat, reason, value in alerts:
+                self._send(text(lang, f"health_{reason}", cat=cat, value=value), self._picture(cat))
+
+    @callback
+    def _notify_visit(self, visit: dict[str, Any]) -> None:
+        lang, cat = self.hass.config.language, visit["cat"]
+        if cat in self.cats.profiles:
+            if self.cats.profiles[cat]["notify_visit"]:
+                self._send(text(lang, "visit", cat=cat, weight=visit["weight"]), self._picture(cat))
+        elif self.options.get(CONF_NOTIFY_UNIDENTIFIED) and visit.get("reason"):
+            self._send(text(lang, f"unidentified_{visit['reason']}", weight=visit["weight"], cat=visit.get("likely_cat") or ""))
+        self._notify_health(visit.get("health", []))
+
+    @callback
+    def _check_inactivity(self, _now: Any = None) -> None:
+        hours = {n: p["alert_hours"] for n, p in self.cats.profiles.items()}
+        lang = self.hass.config.language
+        late = self.cats.inactive(dt_util.now(), hours)
+        for cat, limit in late:
+            self._send(text(lang, "inactive", cat=cat, hours=f"{limit:g}"), self._picture(cat))
+        if late:
+            self._save()
+
+    @callback
+    def async_cats_changed(self) -> None:
+        """After a correction (reassign, recalibrate, clear): save and refresh the entities."""
+        self._save()
         self.async_update_listeners()
 
     @callback
@@ -190,9 +268,11 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self.cats and self.cats.profiles:
             reason = self.profile.visit_reason(dps) if self.profile.visit_reason else None
             visit = self.cats.record(data.get("weight"), data.get("duration"), dt_util.now(), reason)
-            data = {**data, "cat": visit["cat"]}
-            if "reason" in visit:
-                data["reason"] = visit["reason"]
+            if visit is not None:
+                data = {**data, "cat": visit["cat"]}
+                if "reason" in visit:
+                    data["reason"] = visit["reason"]
+                self._notify_visit(visit)
             self._save()
             self.async_update_listeners()
         async_dispatcher_send(self.hass, signal_visit(self.config_entry.entry_id), data)

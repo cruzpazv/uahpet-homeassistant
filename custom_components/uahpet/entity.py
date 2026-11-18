@@ -32,3 +32,21 @@ class UahpetEntity(CoordinatorEntity[UahpetCoordinator]):
 
     def dp_value(self, dp: int) -> Any:
         return get(self.coordinator.data, dp)
+
+
+class UahpetCatEntity(UahpetEntity):
+    """Entity of the built-in cat profiles (computed by Home Assistant, always available)."""
+
+    def __init__(self, coordinator: UahpetCoordinator, description: EntityDescription, cat: str | None = None) -> None:
+        super().__init__(coordinator, description)
+        self.cat = cat
+        if cat:
+            self._attr_translation_placeholders = {"cat": cat}
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    def cat_attributes(self) -> dict[str, Any]:
+        profile = self.coordinator.cats.profiles.get(self.cat) or {}
+        return {"cat": self.cat, **({"color": profile["color"]} if profile.get("color") else {})}
