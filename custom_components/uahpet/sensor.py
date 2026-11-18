@@ -52,8 +52,10 @@ class UahpetSensor(UahpetEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        fn = self.entity_description.attrs_fn
-        return fn(self.coordinator.data) if fn else None
+        desc = self.entity_description
+        if desc.derived_attrs_fn and self.coordinator.tracker:
+            return desc.derived_attrs_fn(self.coordinator.tracker)
+        return desc.attrs_fn(self.coordinator.data) if desc.attrs_fn else None
 
 
 # ---------- cat profiles (built-in identification) ----------

@@ -96,7 +96,8 @@ Settings → Devices & services → Add integration → **UAHPET**: device ID an
 | Sensor *Last cleaning* / *Next auto clean* | derived | Timestamps. Next auto clean = end of visit + clean delay (not set when auto clean or Do not disturb stop it) |
 | Sensor *Waste bin last emptied* | derived | When the bin goes back to OK after being full or taken out |
 | Event *Visit* | 7, 8, 106 | One event per visit with `weight` (kg) and `duration` (s); with cat profiles its type is the cat's name |
-| Binary sensors (8) | 21, 22 | Too many visits, no weight, cat stayed too long, not in place, weighing error, bin cover open, bin full, motor fault |
+| Binary sensors (8) | 21, 22 | Too many visits, no weight, cat stayed too long, weighing error, bin cover open, bin full, motor fault, and *Waste bin opened* (an opening, not an alert: you took it out to look at it) |
+| Binary sensor *Waste bin out of place* | derived | The waste bin has been out for more than 5 minutes: this one is an alert |
 | Button *Clean* / *Level litter* / *Empty litter* | 3 / 103 / 107 | |
 | Button *Stop* | 3 / 103 / 107 | Switches off the DP of the running task. Best effort: not confirmed that every firmware honours it |
 | Switch *Auto clean* | 4 | |
@@ -122,7 +123,7 @@ Derived values are kept across restarts (stored per device).
 
 The cards load automatically with the integration and follow the UAHPET app. Add them from the card picker (search "UAHPET"); all have a visual editor. `device_id` is optional: without it each card uses the first matching device. Texts in English and Spanish.
 
-**Size:** every card has a `scale` option (0.7–1.5, *Size* in the editor) to make it smaller or bigger, and fills the height you give it in a sections dashboard.
+**Size:** every card has a `scale` option (0.7–1.5, *Size* in the editor) to make it smaller or bigger, and fills the height you give it in a sections dashboard. The charts (Weight, Visits per day, Statistics) redraw for the height they get, so they stay whole when the card is made shorter.
 
 ### Litter box cards
 

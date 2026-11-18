@@ -21,14 +21,16 @@ class UahpetSensorDescription(SensorEntityDescription):
     value_fn: Callable[[DPS], Any] | None = None
     attrs_fn: Callable[[DPS], dict[str, Any]] | None = None
     derived_fn: Callable[[Any], Any] | None = None  # reads the profile's tracker instead of the DPs
+    derived_attrs_fn: Callable[[Any], dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class UahpetBinarySensorDescription(BinarySensorEntityDescription):
-    """One bit of a bitmap DP."""
+    """One bit of a bitmap DP, or a value derived by the profile's tracker."""
 
-    dp: int
-    bit: int
+    dp: int = 0
+    bit: int = 0
+    derived_fn: Callable[[Any], bool | None] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

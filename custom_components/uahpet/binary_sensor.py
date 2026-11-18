@@ -31,7 +31,10 @@ class UahpetBinarySensor(UahpetEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        return bit(self.dp_value(self.entity_description.dp), self.entity_description.bit)
+        desc = self.entity_description
+        if desc.derived_fn:
+            return desc.derived_fn(self.coordinator.tracker) if self.coordinator.tracker else None
+        return bit(self.dp_value(desc.dp), desc.bit)
 
 
 class CatHealthSensor(UahpetCatEntity, BinarySensorEntity):

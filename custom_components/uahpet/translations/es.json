@@ -84,7 +84,7 @@
         "name": "Gato demasiado tiempo dentro"
       },
       "not_in_place": {
-        "name": "Fuera de posición"
+        "name": "Depósito de residuos abierto"
       },
       "e_weight": {
         "name": "Error de pesaje"
@@ -100,6 +100,9 @@
       },
       "cat_health": {
         "name": "Salud de {cat}"
+      },
+      "bin_misplaced": {
+        "name": "Depósito de residuos mal colocado"
       }
     },
     "button": {

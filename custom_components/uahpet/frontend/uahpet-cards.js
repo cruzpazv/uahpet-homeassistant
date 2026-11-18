@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.6.0";
+const VERSION = "0.6.1";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
@@ -79,7 +79,9 @@ const I18N = {
     a_motor_fault: "Motor fault", s_motor_fault: "Check nothing blocks the drum and restart the litter box. Contact UAHPET if it persists.",
     a_bin_full: "Waste bin full", s_bin_full: "Empty the waste bin.",
     a_bin_cover_open: "Cover open", s_bin_cover_open: "Close the top cover / bin cover.",
-    a_not_in_place: "Not in place", s_not_in_place: "Check the waste bin is installed properly.",
+    a_not_in_place: "Waste bin opened", s_not_in_place: "Close it when you're done. If it stays out 5 minutes, it counts as out of place.",
+    a_bin_misplaced: "Waste bin out of place", s_bin_misplaced: "It has been out for a while: check it is pushed in properly.",
+    bin_open_chip: "Bin open", ev_bin_opened: "Waste bin opened",
     a_e_weight: "Weighing error", s_e_weight: "Check the litter is installed properly and the box isn't touching anything, place it on a flat surface, then tap Level to recalibrate.",
     a_no_weight: "No weight detected", s_no_weight: "Check there is enough litter, then tap Level.",
     a_stagnant: "Cat stayed too long", s_stagnant: "The litter box levelled the litter to make the cat leave and reset the weight.",
@@ -170,7 +172,9 @@ const I18N = {
     a_motor_fault: "Fallo del motor", s_motor_fault: "Comprueba que nada bloquea el tambor y reinicia el arenero. Si sigue, contacta con UAHPET.",
     a_bin_full: "Cubo de residuos lleno", s_bin_full: "Vacía el cubo de residuos.",
     a_bin_cover_open: "Tapa abierta", s_bin_cover_open: "Cierra la tapa superior o la del cubo.",
-    a_not_in_place: "Fuera de posición", s_not_in_place: "Comprueba que el cubo de residuos está bien colocado.",
+    a_not_in_place: "Depósito de residuos abierto", s_not_in_place: "Ciérralo cuando termines. Si sigue fuera 5 minutos, cuenta como mal colocado.",
+    a_bin_misplaced: "Depósito de residuos mal colocado", s_bin_misplaced: "Lleva un rato fuera: comprueba que está bien metido.",
+    bin_open_chip: "Depósito abierto", ev_bin_opened: "Depósito abierto",
     a_e_weight: "Error de pesaje", s_e_weight: "Comprueba que la arena está bien puesta y que el arenero no toca nada, ponlo en una superficie plana y pulsa Nivelar para recalibrar.",
     a_no_weight: "Sin peso detectado", s_no_weight: "Comprueba que hay arena suficiente y pulsa Nivelar.",
     a_stagnant: "Gato demasiado tiempo dentro", s_stagnant: "El arenero ha nivelado la arena para que el gato salga y ha reiniciado el peso.",
@@ -398,7 +402,28 @@ class UahpetCard extends HTMLElement {
   disconnectedCallback() {
     clearInterval(this._timer);
     this._timer = null;
+    this._ro?.disconnect();
+    this._observed = null;
   }
+
+  /** Charts are drawn for the size of their box, so they fit when the card is made shorter or taller. */
+  _observeChart() {
+    const box = this.shadowRoot.querySelector(".chart-box");
+    if (!box || this._observed === box) return;
+    this._ro ||= new ResizeObserver((entries) => {
+      const r = entries[0].contentRect, w = Math.round(r.width), h = Math.round(r.height);
+      if (!w || !h || (this._box && Math.abs(this._box.w - w) < 3 && Math.abs(this._box.h - h) < 3)) return;
+      this._box = { w, h };
+      this._key = null;
+      requestAnimationFrame(() => this._render());
+    });
+    this._ro.disconnect();
+    this._ro.observe(box);
+    this._observed = box;
+  }
+
+  /** viewBox height for a chart `W` units wide that fills its box (fallback before the first measure). */
+  _chartH(W, fallback) { return this._box ? Math.max(50, Math.round((W * this._box.h) / this._box.w)) : fallback; }
 
   getCardSize() { return 5; }
   getGridOptions() { return { columns: 12, min_columns: 4, rows: "auto" }; }
@@ -448,6 +473,8 @@ class UahpetCard extends HTMLElement {
         <button class="btn primary" data-act="dlg-ok">${esc(d.danger || t(this._hass, "confirm_btn"))}</button></div></div></div>` : "";
     const scale = Number(this._config.scale) || 1;
     this.shadowRoot.innerHTML = `${STYLE}<ha-card ${scale !== 1 ? `style="zoom:${scale}"` : ""}>${this.body()}${dlg}</ha-card>`;
+    this._observed = null;
+    this._observeChart();
     this.tick?.();
   }
 }
@@ -502,10 +529,12 @@ function boxArt(status, binState) {
 /* ---------- 1. main card ---------- */
 
 const STATUS_TONE = { standby: "ok", cleaning: "busy", clearing: "busy", leveling: "busy", radar: "warn", clumping: "warn", e_weight: "bad", offline: "bad" };
-const ALERTS = ["motor_fault", "bin_full", "bin_cover_open", "not_in_place", "e_weight", "no_weight", "stagnant", "excessive_clean_times"];
+const ALERTS = ["motor_fault", "bin_full", "bin_cover_open", "bin_misplaced", "e_weight", "no_weight", "stagnant", "excessive_clean_times"];
+// the waste bin taken out to look at it: shown as information, not as an alert (bin_misplaced if it stays out)
+const BIN_OPEN = "not_in_place";
 const ALERT_ICONS = {
   motor_fault: "mdi:engine-off-outline", bin_full: "mdi:delete-alert", bin_cover_open: "mdi:delete-outline",
-  not_in_place: "mdi:alert-rhombus-outline", e_weight: "mdi:scale-unbalanced", no_weight: "mdi:scale-balance",
+  not_in_place: "mdi:tray-arrow-up", bin_misplaced: "mdi:tray-alert", e_weight: "mdi:scale-unbalanced", no_weight: "mdi:scale-balance",
   stagnant: "mdi:timer-alert-outline", excessive_clean_times: "mdi:counter",
 };
 
@@ -562,6 +591,7 @@ class UahpetLitterboxCard extends LitterCard {
     const chips = [
       known(bin) ? chip(bin.state === "bin_normal" ? "ok" : bin.state === "bin_full" ? "bad" : "warn", "mdi:delete-outline", t(h, `bin_${bin.state}`), "bin_status") : "",
       known(litter) ? chip("", "mdi:grain", t(h, `lt_${litter.state}`), "litter_type") : "",
+      this._state(BIN_OPEN)?.state === "on" && !alerts.includes("bin_misplaced") ? chip("warn", ALERT_ICONS[BIN_OPEN], t(h, "bin_open_chip"), BIN_OPEN) : "",
       alerts.length ? chip("bad", "mdi:alert-circle-outline", alerts.length === 1 ? t(h, "alert_1") : t(h, "alerts_n", { n: alerts.length }), "active_alerts") : "",
     ].join("");
     const stat = (key, icon, label) => map[key] ? `<button class="stat" data-act="info" data-key="${key}">
@@ -630,7 +660,7 @@ class UahpetLitterboxTimelineCard extends LitterCard {
   }
 
   _sources() {
-    const keys = ["visit", "work_status", "last_bin_emptied", ...(this._config.show_alerts ? ALERTS : [])];
+    const keys = ["visit", "work_status", "last_bin_emptied", ...(this._config.show_alerts ? [...ALERTS, BIN_OPEN] : [])];
     return keys.map((k) => this._map[k]).filter(Boolean);
   }
 
@@ -703,12 +733,14 @@ class UahpetLitterboxTimelineCard extends LitterCard {
     }
     // alerts (rising edges)
     if (this._config.show_alerts) {
-      for (const key of ALERTS) {
+      for (const key of [...ALERTS, BIN_OPEN]) {
         let prev = null;
         for (const row of hist[m[key]] || []) {
           const ts = tsOf(row);
           if (row.s === "on" && prev !== "on" && prev !== null && ts >= start) {
-            items.push({ ts, kind: "alert", icon: ALERT_ICONS[key], text: t(h, `a_${key}`) });
+            items.push(key === BIN_OPEN
+              ? { ts, kind: "bin", icon: ALERT_ICONS[key], text: t(h, "ev_bin_opened") }
+              : { ts, kind: "alert", icon: ALERT_ICONS[key], text: t(h, `a_${key}`) });
           }
           prev = row.s;
         }
@@ -826,7 +858,7 @@ class UahpetLitterboxStatsCard extends LitterCard {
   }
 
   _chart(series, kind) {
-    const W = 300, H = 120, pad = 6;
+    const W = 300, TH = this._chartH(W, 146), H = TH - 26, pad = 6;
     const vals = series.map((p) => p.v).filter((v) => v !== null);
     if (!vals.length) return "";
     const max = Math.max(...vals) || 1;
@@ -853,7 +885,7 @@ class UahpetLitterboxStatsCard extends LitterCard {
       marks = `<polyline class="line" points="${pts.map(([x, yy]) => `${x},${yy}`).join(" ")}"/>` +
         pts.map(([x, yy, i]) => `<circle class="dot ${this._picked === i ? "picked" : ""}" data-act="bar" data-val="${i}" cx="${x}" cy="${yy}" r="${many ? 3 : 4.5}"/>`).join("");
     }
-    return `<svg class="chart" viewBox="0 -4 ${W} ${H + 22}" preserveAspectRatio="none" role="img">${marks}<g class="xl">${labels}</g></svg>`;
+    return `<div class="chart-box"><svg class="chart" viewBox="0 -4 ${W} ${TH}" role="img">${marks}<g class="xl">${labels}</g></svg></div>`;
   }
 
   body() {
@@ -1000,7 +1032,10 @@ class UahpetLitterboxMaintenanceCard extends LitterCard {
       known(cleaned) ? t(h, "cleaned_ago", { t: fmtAgo(h, new Date(cleaned.state)) }) : "",
     ].filter(Boolean);
     const binTone = !known(bin) ? "" : bin.state === "bin_normal" ? "ok" : bin.state === "bin_full" ? "bad" : "warn";
-    const list = alerts.map((k) => {
+    const binOpen = this._state(BIN_OPEN)?.state === "on" && !alerts.includes("bin_misplaced");
+    const info = binOpen ? `<li class="fix info"><ha-icon icon="${ALERT_ICONS[BIN_OPEN]}"></ha-icon><div><div class="fix-t">${esc(t(h, `a_${BIN_OPEN}`))}</div>
+        <div class="help">${esc(t(h, `s_${BIN_OPEN}`))}</div></div></li>` : "";
+    const list = info + alerts.map((k) => {
       const action = ALERT_ACTION[k];
       return `<li class="fix"><ha-icon icon="${ALERT_ICONS[k]}"></ha-icon><div><div class="fix-t">${esc(t(h, `a_${k}`))}</div>
         <div class="help">${esc(t(h, `s_${k}`))}</div>
@@ -1314,7 +1349,7 @@ class UahpetVisitsChartCard extends CatCardBase {
     });
     const hidden = this._hidden || new Set();
     const shown = series.filter((s) => !hidden.has(s.name));
-    const W = 320, H = 140, top = 14, slot = W / days, group = slot * 0.82, bw = shown.length ? group / shown.length : 0;
+    const W = 320, H = this._chartH(W, 160) - 20, top = 14, slot = W / days, group = slot * 0.82, bw = shown.length ? group / shown.length : 0;
     const max = Math.max(1, ...shown.flatMap((s) => s.values));
     let bars = "", labels = "", hits = "";
     for (let i = 0; i < days; i++) {
@@ -1341,8 +1376,8 @@ class UahpetVisitsChartCard extends CatCardBase {
         <span class="dot" style="background:${esc(s.color)}"></span>${esc(s.name)}<span class="sub">${total} · ${esc(t(h, "per_day", { v: fmtNum(h, total / days) }))}</span></button>`;
     }).join("");
     return `${head}<div class="sub">${esc(summary)}</div>
-      <svg class="gchart" viewBox="0 0 ${W} ${H + 20}" role="img"><line class="axis" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>
-      <text class="max" x="0" y="9">${max}</text>${hits}${bars}${labels}</svg><div class="legend">${legend}</div>`;
+      <div class="chart-box"><svg class="gchart" viewBox="0 0 ${W} ${H + 20}" role="img"><line class="axis" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>
+      <text class="max" x="0" y="9">${max}</text>${hits}${bars}${labels}</svg></div><div class="legend">${legend}</div>`;
   }
 }
 
@@ -1399,7 +1434,7 @@ class UahpetWeightChartCard extends CatCardBase {
     const times = [...new Set(shown.flatMap((s) => [...s.pts.keys()]))].sort((a, b) => a - b);
     const values = shown.flatMap((s) => [...s.pts.values()]);
     if (!times.length || !values.length) return `${head}<div class="empty">${esc(t(h, "no_data"))}</div>`;
-    const W = 320, H = 150, padY = 14;
+    const W = 320, H = this._chartH(W, 170) - 20, padY = 14;
     const vmin = Math.min(...values), vmax = Math.max(...values);
     let lo = vmin, hi = vmax;
     if (hi - lo < 0.4) { const mid = (hi + lo) / 2; lo = mid - 0.2; hi = mid + 0.2; }
@@ -1444,8 +1479,8 @@ class UahpetWeightChartCard extends CatCardBase {
         ${last !== null ? `<b>${esc(fmtNum(h, last, 2))} kg</b>` : ""}${d ? `<span class="sub">${esc(t(h, "change", { v: d, n: days }))}</span>` : ""}</button>`;
     }).join("");
     return `${head}<div class="sub">${esc(summary)}</div>
-      <svg class="gchart wchart" viewBox="0 0 ${W} ${H + 20}" role="img"><line class="axis" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>
-      ${hits}${picked}${lines}${labels}</svg><div class="legend">${legend}</div>`;
+      <div class="chart-box"><svg class="gchart wchart" viewBox="0 0 ${W} ${H + 20}" role="img"><line class="axis" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>
+      ${hits}${picked}${lines}${labels}</svg></div><div class="legend">${legend}</div>`;
   }
 }
 
@@ -1697,6 +1732,7 @@ class UahpetPurifierBarCard extends UahpetPurifierCard {
 /* ---------- styles ---------- */
 
 const STYLE = `<style>
+  :host { display: block; height: 100%; }
   :host { --ok: var(--success-color, #43a047); --warn: var(--warning-color, #ffa000); --bad: var(--error-color, #db4437);
     --busy: var(--primary-color, #03a9f4); --muted: var(--secondary-text-color); --soft: var(--secondary-background-color, rgba(127,127,127,.08));
     --box-body: #4fb393; --box-base: #2a6b5a; --box-rim: #e6f0ec; --box-hole: #163a32; --box-litter: #e3c48c; }
@@ -1817,7 +1853,10 @@ const STYLE = `<style>
   /* stats */
   .range { display: flex; gap: 6px; }
   .big { font-size: 1.3em; font-weight: 500; font-variant-numeric: tabular-nums; }
-  .chart { width: 100%; height: 150px; display: block; overflow: visible; }
+  .chart { display: block; overflow: visible; }
+  ha-card > * { flex-shrink: 0; }
+  .chart-box { flex: 1 1 150px; min-height: 60px; position: relative; flex-shrink: 1; }
+  .chart-box > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .chart .bar { fill: color-mix(in srgb, var(--primary-color) 45%, transparent); cursor: pointer; }
   .chart .bar.today, .chart .bar.picked { fill: var(--primary-color); }
   .chart .line { fill: none; stroke: var(--primary-color); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
@@ -1860,6 +1899,7 @@ const STYLE = `<style>
   .fixes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .fix { display: grid; grid-template-columns: 24px 1fr; gap: 10px; padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--bad) 10%, transparent); }
   .fix > ha-icon { color: var(--bad); }
+  .fix.info { background: color-mix(in srgb, var(--warn) 14%, transparent); } .fix.info > ha-icon { color: var(--warn); }
   .fix-t { font-weight: 500; }
   .all-good { display: flex; align-items: center; gap: 8px; color: var(--ok); font-weight: 500; }
 
@@ -1922,13 +1962,14 @@ const STYLE = `<style>
   .foot { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; }
   .link { display: inline-flex; align-items: center; gap: 4px; color: var(--primary-color); font-size: .9em; }
   .link ha-icon { --mdc-icon-size: 18px; }
-  .gchart { width: 100%; display: block; overflow: visible; }
+  .gchart { display: block; overflow: visible; }
   .gchart text { fill: var(--muted); font-size: 10px; text-anchor: middle; }
   .gchart text.max { text-anchor: start; } .gchart text.x.today { fill: var(--primary-text-color); font-weight: 600; }
   .gchart text.v { font-size: 9px; fill: var(--primary-text-color); }
   .gchart .axis { stroke: var(--divider-color); }
   .gchart .hit { fill: transparent; cursor: pointer; } .gchart .hit.picked { fill: var(--soft); }
-  .legend { display: flex; flex-wrap: wrap; gap: 6px; }
+  .legend { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .legend::-webkit-scrollbar { display: none; } .legend .leg { flex: none; }
   .wchart .wline { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
   .wchart .ylab { text-anchor: start; } .wchart .grid { stroke: var(--divider-color); stroke-dasharray: 2 4; } .wchart .cursor { stroke: var(--muted); stroke-dasharray: 3 3; }
   .leg { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 16px; background: var(--soft); font-size: .9em; }

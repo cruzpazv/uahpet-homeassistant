@@ -84,7 +84,7 @@
         "name": "Cat stayed too long"
       },
       "not_in_place": {
-        "name": "Not in place"
+        "name": "Waste bin opened"
       },
       "e_weight": {
         "name": "Weighing error"
@@ -100,6 +100,9 @@
       },
       "cat_health": {
         "name": "{cat} health"
+      },
+      "bin_misplaced": {
+        "name": "Waste bin out of place"
       }
     },
     "button": {

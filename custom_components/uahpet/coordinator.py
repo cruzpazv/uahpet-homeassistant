@@ -44,6 +44,7 @@ from .const import (
 )
 from .messages import text
 from .profiles import PROFILES_BY_KEY
+from .tracker import BIN_OPEN_GRACE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._changed: dict[str, float] = {}  # DP id -> monotonic time its value last changed
         self._visit_at: float | None = None  # monotonic time of a visit waiting for its weight / duration
         self._visit_timer: Any = None
+        self._bin_timer: Any = None
         self.client = UahpetClient(
             self.device_id,
             entry.data[CONF_HOST],
@@ -215,16 +217,36 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Full status polls re-send every DP: before the counter only a real change counts.
             if self.first_data.is_set() and old.get(dp) != value:
                 self._changed[dp] = now_m
-        if self.tracker and self.first_data.is_set():
-            result = self.tracker.update(old, new, dt_util.now())
+        if self.tracker:
+            # first update after (re)connecting: no transitions, only the current state (e.g. bin already out)
+            result = self.tracker.update(old if self.first_data.is_set() else new, new, dt_util.now())
             if result.changed:
                 self._save()
             if result.visit_ended and self.profile.visit_data:
                 self._start_visit(now_m)
+            self._schedule_bin_check()
         self.async_set_updated_data(new)
         self.first_data.set()
         if self._visit_at is not None:
             self._check_visit()
+
+    @callback
+    def _schedule_bin_check(self) -> None:
+        """Re-evaluate "bin out of place" once the grace time has passed, even without device updates."""
+        since = getattr(self.tracker, "bin_open_since", None)
+        if since is None:
+            if self._bin_timer:
+                self._bin_timer()
+                self._bin_timer = None
+            return
+        if self._bin_timer is None:
+            wait = max(1.0, BIN_OPEN_GRACE - (dt_util.now() - since).total_seconds() + 1)
+            self._bin_timer = async_call_later(self.hass, wait, self._bin_check)
+
+    @callback
+    def _bin_check(self, _now: Any) -> None:
+        self._bin_timer = None
+        self.async_update_listeners()
 
     @callback
     def _start_visit(self, now_m: float) -> None:

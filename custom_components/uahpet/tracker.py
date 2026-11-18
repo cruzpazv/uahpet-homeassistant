@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
+BIN_OPEN_GRACE = 300  # s the waste bin may stay out (to look at it) before it counts as badly placed
+
 
 @dataclass
 class TrackResult:
@@ -28,6 +30,8 @@ class LitterboxTracker:
     dp_auto_clean: str = "4"
     dp_sleep: str = "101"
     dp_bin: str = "113"
+    dp_notification: str = "21"
+    bin_open_bit: int = 3  # "not_in_place": the waste bin is out (opened to look at it, or badly placed)
 
     day: str | None = None
     cleanings_today: int = 0
@@ -36,8 +40,10 @@ class LitterboxTracker:
     last_bin_emptied: datetime | None = None
     last_visit_at: datetime | None = None
     last_burying: datetime | None = None
+    bin_open_since: datetime | None = None
+    dps: dict[str, Any] = field(default_factory=dict, repr=False)  # latest device state (not stored)
     _stored: tuple[str, ...] = field(
-        default=("day", "cleanings_today", "last_cleaning", "next_auto_clean", "last_bin_emptied", "last_visit_at", "last_burying"),
+        default=("day", "cleanings_today", "last_cleaning", "next_auto_clean", "last_bin_emptied", "last_visit_at", "last_burying", "bin_open_since"),
         repr=False,
     )
 
@@ -55,7 +61,7 @@ class LitterboxTracker:
             if not data or name not in data:
                 continue
             value = data[name]
-            if name in ("last_cleaning", "next_auto_clean", "last_bin_emptied", "last_visit_at", "last_burying") and value:
+            if name in ("last_cleaning", "next_auto_clean", "last_bin_emptied", "last_visit_at", "last_burying", "bin_open_since") and value:
                 value = datetime.fromisoformat(value)
             setattr(self, name, value)
 
@@ -63,6 +69,10 @@ class LitterboxTracker:
 
     def cleanings(self, now: datetime) -> int:
         return self.cleanings_today if self.day == now.date().isoformat() else 0
+
+    def bin_misplaced(self, now: datetime) -> bool:
+        """The waste bin has been out for longer than a quick look: it is badly placed."""
+        return self.bin_open_since is not None and (now - self.bin_open_since).total_seconds() >= BIN_OPEN_GRACE
 
     # ---------- updates ----------
 
@@ -76,6 +86,7 @@ class LitterboxTracker:
     def update(self, old: dict[str, Any], new: dict[str, Any], now: datetime) -> TrackResult:
         """`old`/`new`: full DP state before and after a device update."""
         res = TrackResult()
+        self.dps = new
         visits_old, visits_new = old.get(self.dp_visits), new.get(self.dp_visits)
         if isinstance(visits_old, int) and isinstance(visits_new, int) and visits_new > visits_old:
             res.visit_ended = True
@@ -102,6 +113,15 @@ class LitterboxTracker:
         auto_off = new.get(self.dp_auto_clean) is False or new.get(self.dp_sleep) == "sleep_on"
         if auto_off and self.next_auto_clean is not None:
             self.next_auto_clean = None
+            res.changed = True
+
+        flags = new.get(self.dp_notification)
+        bin_open = isinstance(flags, int) and bool((flags >> self.bin_open_bit) & 1)
+        if bin_open and self.bin_open_since is None:
+            self.bin_open_since = now
+            res.changed = True
+        elif not bin_open and self.bin_open_since is not None:
+            self.bin_open_since = None
             res.changed = True
 
         bin_old, bin_new = old.get(self.dp_bin), new.get(self.dp_bin)

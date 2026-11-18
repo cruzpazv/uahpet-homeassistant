@@ -73,8 +73,14 @@ NOTIFICATION_BITS = [
 FAULT_BITS = ["motor_fault"]
 
 
-def _alerts(dps: dict[str, Any]) -> list[str]:
-    return active_bits(get(dps, DP.NOTIFICATION), NOTIFICATION_BITS) + active_bits(get(dps, DP.FAULT), FAULT_BITS)
+def _alerts(dps: dict[str, Any], misplaced: bool = False) -> list[str]:
+    """Active alerts. An open waste bin is not one (someone is looking at it) until it stays out too long."""
+    bits = [b for b in active_bits(get(dps, DP.NOTIFICATION), NOTIFICATION_BITS) if b != "not_in_place"]
+    return bits + active_bits(get(dps, DP.FAULT), FAULT_BITS) + (["bin_misplaced"] if misplaced else [])
+
+
+def _tracker_alerts(t: LitterboxTracker) -> list[str]:
+    return _alerts(t.dps, t.bin_misplaced(dt_util.now()))
 
 
 def _log_attrs(dps: dict[str, Any]) -> dict[str, Any]:
@@ -177,8 +183,8 @@ LITTERBOX = Profile(
         ),
         UahpetSensorDescription(
             key="active_alerts",
-            value_fn=lambda d: len(_alerts(d)),
-            attrs_fn=lambda d: {"alerts": _alerts(d)},
+            derived_fn=lambda t: len(_tracker_alerts(t)),
+            derived_attrs_fn=lambda t: {"alerts": _tracker_alerts(t)},
         ),
         UahpetSensorDescription(
             key="work_log",
@@ -198,8 +204,15 @@ LITTERBOX = Profile(
     ),
     binary_sensors=(
         *(
-            UahpetBinarySensorDescription(key=label, dp=DP.NOTIFICATION, bit=i, device_class=BinarySensorDeviceClass.PROBLEM)
+            UahpetBinarySensorDescription(
+                key=label, dp=DP.NOTIFICATION, bit=i,
+                # opening the waste bin to look at it is not a problem; bin_misplaced is
+                device_class=BinarySensorDeviceClass.OPENING if label == "not_in_place" else BinarySensorDeviceClass.PROBLEM,
+            )
             for i, label in enumerate(NOTIFICATION_BITS)
+        ),
+        UahpetBinarySensorDescription(
+            key="bin_misplaced", derived_fn=lambda t: t.bin_misplaced(dt_util.now()), device_class=BinarySensorDeviceClass.PROBLEM
         ),
         *(
             UahpetBinarySensorDescription(key=label, dp=DP.FAULT, bit=i, device_class=BinarySensorDeviceClass.PROBLEM)

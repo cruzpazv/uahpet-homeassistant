@@ -11,7 +11,10 @@
         "default": "mdi:timer-alert-outline"
       },
       "not_in_place": {
-        "default": "mdi:alert-rhombus-outline"
+        "default": "mdi:tray",
+        "state": {
+          "on": "mdi:tray-arrow-up"
+        }
       },
       "e_weight": {
         "default": "mdi:scale-unbalanced"
@@ -27,6 +30,9 @@
       },
       "cat_health": {
         "default": "mdi:heart-pulse"
+      },
+      "bin_misplaced": {
+        "default": "mdi:tray-alert"
       }
     },
     "button": {

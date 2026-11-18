@@ -167,3 +167,27 @@ async def test_visit_timeout_without_new_values(hass: HomeAssistant, fake_client
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=61))
     await hass.async_block_till_done()
     assert hass.states.get(_eid(hass, "event", "visit")).attributes["weight"] == 6.1
+
+
+async def test_bin_opened_then_misplaced(hass: HomeAssistant, fake_client) -> None:
+    """Opening the waste bin to look at it is not an alert; staying out 5 minutes is."""
+    await _setup(hass)
+    client = fake_client.instances[0]
+    client.on_dps({"21": 0b1000})  # not_in_place
+    await hass.async_block_till_done()
+    assert hass.states.get(_eid(hass, "binary_sensor", "not_in_place")).state == STATE_ON
+    assert hass.states.get(_eid(hass, "binary_sensor", "bin_misplaced")).state == STATE_OFF
+    assert hass.states.get(_eid(hass, "sensor", "active_alerts")).state == "0"
+
+    from unittest.mock import patch as _patch
+    later = dt_util.now() + timedelta(seconds=301)
+    with _patch("custom_components.uahpet.profiles.litterbox.dt_util.now", return_value=later):
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=302))
+        await hass.async_block_till_done()
+        assert hass.states.get(_eid(hass, "binary_sensor", "bin_misplaced")).state == STATE_ON
+        alerts = hass.states.get(_eid(hass, "sensor", "active_alerts"))
+        assert alerts.state == "1" and alerts.attributes["alerts"] == ["bin_misplaced"]
+
+    client.on_dps({"21": 0})
+    await hass.async_block_till_done()
+    assert hass.states.get(_eid(hass, "binary_sensor", "bin_misplaced")).state == STATE_OFF
