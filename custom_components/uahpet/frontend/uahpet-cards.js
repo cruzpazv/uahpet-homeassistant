@@ -96,7 +96,7 @@ const I18N = {
     purifier_not_found: "No Tuya air purifier found. Set it up in the Tuya integration first.",
     // editors
     ed_device_id: "Device", ed_title: "Title", ed_show_actions: "Show actions", ed_show_quick: "Show quick toggles",
-    ed_show_art: "Show the litter box drawing", ed_art_style: "Drawing", art_drum: "Drum", art_circle: "Circle (logo)", art_cube: "Cube", ed_art_minimal: "Minimalist version", ed_cat_color: "Cat colour", ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
+    ed_show_art: "Show the litter box drawing", ed_art_style: "Drawing", art_drum: "Drum", art_circle: "Circle (logo)", art_cube: "Cube", art_v_minimal: "minimalist", art_v_cat: "with cat", ed_box_color: "Litter box colour", ed_cat_color: "Cat colour", ed_show_stats: "Show today's numbers", ed_show_cats: "Show cats (Litter Cat Identifier)", ed_show_advanced: "Show advanced settings", ed_range: "Period",
     ed_max_items: "Maximum entries", ed_show_cleanings: "Show cleanings", ed_show_alerts: "Show alerts",
     ed_days: "Days", ed_metric: "Default chart", ed_show_modes: "Show modes", ed_show_speed: "Show speed",
     ed_show_timer: "Show timer", ed_show_extras: "Show child lock and filter reset",
@@ -188,7 +188,7 @@ const I18N = {
     speed_sleep: "Noche", timer_cancel: "No",
     purifier_not_found: "No hay ningún purificador Tuya. Añádelo antes a la integración de Tuya.",
     ed_device_id: "Dispositivo", ed_title: "Título", ed_show_actions: "Mostrar acciones", ed_show_quick: "Mostrar interruptores rápidos",
-    ed_show_art: "Mostrar el dibujo del arenero", ed_art_style: "Dibujo", art_drum: "Tambor", art_circle: "Círculo (logo)", art_cube: "Cubo", ed_art_minimal: "Versión minimalista", ed_cat_color: "Color del gato", ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
+    ed_show_art: "Mostrar el dibujo del arenero", ed_art_style: "Dibujo", art_drum: "Tambor", art_circle: "Círculo (logo)", art_cube: "Cubo", art_v_minimal: "minimalista", art_v_cat: "con gato", ed_box_color: "Color del arenero", ed_cat_color: "Color del gato", ed_show_stats: "Mostrar cifras de hoy", ed_show_cats: "Mostrar gatos (Litter Cat Identifier)", ed_show_advanced: "Mostrar ajustes avanzados", ed_range: "Periodo",
     ed_max_items: "Máximo de entradas", ed_show_cleanings: "Mostrar limpiezas", ed_show_alerts: "Mostrar avisos",
     ed_days: "Días", ed_metric: "Gráfica inicial", ed_show_modes: "Mostrar modos", ed_show_speed: "Mostrar velocidad",
     ed_show_timer: "Mostrar temporizador", ed_show_extras: "Mostrar bloqueo y reinicio del filtro",
@@ -505,8 +505,39 @@ class LitterCard extends UahpetCard {
 const BUSY = ["cleaning", "clearing", "leveling"];
 
 /** Drum litter box drawn in SVG; CSS animates it per status (class on the wrapper). */
-const ART_STYLES = ["drum", "circle", "cube"];
-const ART_LEGACY = { logo: "circle", cat: "circle", minimal: "drum" };  // art_style values of 0.8.0 builds
+const ART_MODELS = ["drum", "circle", "cube"];
+const ART_VARIANTS = ["", "-minimal", "-cat"];  // normal, lines only, a cat always peeking out
+const ART_STYLES = ART_MODELS.flatMap((m) => ART_VARIANTS.map((v) => m + v));
+const ART_LEGACY = { logo: "circle-cat", cat: "drum-cat", minimal: "drum-minimal" };  // art_style values of earlier builds
+
+/** art_style (+ the older art_minimal flag) -> {model, minimal, cat}. */
+function artStyle(style, minimalFlag) {
+  style = ART_LEGACY[style] || style;
+  if (!ART_STYLES.includes(style)) style = "drum";
+  const [model, variant] = style.split("-");
+  return { model, minimal: variant === "minimal" || (!variant && !!minimalFlag), cat: variant === "cat" };
+}
+
+const toRgb = (value) => {
+  if (Array.isArray(value) && value.length === 3) return value.map((x) => Math.max(0, Math.min(255, Number(x) || 0)));
+  if (typeof value === "string" && /^#?[0-9a-f]{6}$/i.test(value.trim())) {
+    const v = value.trim().replace("#", "");
+    return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16));
+  }
+  return null;
+};
+const mix = (rgb, to, f) => `rgb(${rgb.map((c, i) => Math.round(c + (to[i] - c) * f)).join(", ")})`;
+
+/** CSS variables for a chosen litter box colour: body, lighter / darker shades for gradients, base, lines. */
+function boxPaint(value) {
+  const rgb = toRgb(value);
+  if (!rgb) return "";
+  const W = [255, 255, 255], K = [0, 0, 0];
+  return [`--box-body:${mix(rgb, W, 0)}`, `--box-hi:${mix(rgb, W, 0.22)}`, `--box-lo:${mix(rgb, K, 0.22)}`,
+    `--box-base:${mix(rgb, K, 0.45)}`, `--box-base-lo:${mix(rgb, K, 0.6)}`,
+    `--steel-a:${mix(rgb, W, 0.7)}`, `--steel-b:${mix(rgb, W, 0.35)}`, `--steel-c:${mix(rgb, K, 0.1)}`, `--steel-base:${mix(rgb, K, 0.4)}`,
+    `--lg:${mix(rgb, K, 0.3)}`, `--lg-soft:${mix(rgb, W, 0)}`].join(";");
+}
 
 /** The cat that peeks out of the opening when one is inside (drawn for a hole of radius 33 at 0,0). */
 const PEEK = `<g class="peek"><g transform="scale(0.295) translate(-256 -262)">
@@ -535,25 +566,20 @@ const ART_PULSE = (cx, cy, r = 70) => `<g class="pulse"><circle cx="${cx}" cy="$
     CSS animates it per status; `catInside` shows the cat peeking out of the opening. */
 /** "#rrggbb" or [r, g, b] -> {color, eye}: eyes light on a dark cat, dark on a light one. */
 function catPaint(value) {
-  let rgb = Array.isArray(value) ? value : null;
-  if (typeof value === "string" && /^#?[0-9a-f]{6}$/i.test(value.trim())) {
-    const v = value.trim().replace("#", "");
-    rgb = [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16));
-  }
-  if (!rgb || rgb.length !== 3) return null;
-  const [r, g, b] = rgb.map((x) => Math.max(0, Math.min(255, Number(x) || 0)));
+  const rgb = toRgb(value);
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
   const light = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.45;
   return { color: `rgb(${r}, ${g}, ${b})`, eye: light ? "#163a32" : "#f2e6b8" };
 }
 
-function boxArt(status, binState, style = "drum", minimal = false, catInside = false, catColor = null) {
-  if (ART_LEGACY[style]) { minimal ||= style === "minimal"; style = ART_LEGACY[style]; }
-  if (!ART_STYLES.includes(style)) style = "drum";
+function boxArt(status, binState, artStyleValue = "drum", minimalFlag = false, catInside = false, catColor = null, boxColor = null) {
+  const { model: style, minimal, cat } = artStyle(artStyleValue, minimalFlag);
   const badge = { clumping: "mdi:timer-sand", e_weight: "mdi:alert", offline: "mdi:lan-disconnect" }[status];
   let shape;
   if (style === "cube") {
     shape = `<defs><clipPath id="hole"><circle cx="100" cy="74" r="33"/></clipPath>
-        <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e3e8ec"/><stop offset=".55" stop-color="#b9c2ca"/><stop offset="1" stop-color="#8e99a4"/></linearGradient></defs>
+        <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--steel-a,#e3e8ec)"/><stop offset=".55" style="stop-color:var(--steel-b,#b9c2ca)"/><stop offset="1" style="stop-color:var(--steel-c,#8e99a4)"/></linearGradient></defs>
       ${ART_PULSE(100, 74)}
       <rect class="shell" x="34" y="12" width="132" height="114" rx="28" fill="url(#steel)"/>
       <rect class="screen" x="74" y="22" width="52" height="9" rx="4.5"/><circle class="led" cx="117" cy="26.5" r="2.2"/>
@@ -563,8 +589,8 @@ function boxArt(status, binState, style = "drum", minimal = false, catInside = f
   } else if (style === "circle") {
     // the integration's logo (assets/icon.svg), drawn in its own 512-unit space
     shape = `<defs><clipPath id="hole"><circle cx="256" cy="262" r="112"/></clipPath><clipPath id="lg-dome"><rect width="512" height="400"/></clipPath>
-        <linearGradient id="lg-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5cc3a2"/><stop offset="1" stop-color="#2c8a6f"/></linearGradient>
-        <linearGradient id="lg-base" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a6b5a"/><stop offset="1" stop-color="#1d4f42"/></linearGradient></defs>
+        <linearGradient id="lg-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--box-hi,#5cc3a2)"/><stop offset="1" style="stop-color:var(--box-lo,#2c8a6f)"/></linearGradient>
+        <linearGradient id="lg-base" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--box-base,#2a6b5a)"/><stop offset="1" style="stop-color:var(--box-base-lo,#1d4f42)"/></linearGradient></defs>
       <g transform="translate(5 -20) scale(0.37)">
         ${ART_PULSE(256, 262, 200)}
         <circle class="shell" cx="256" cy="268" r="200" fill="url(#lg-body)" clip-path="url(#lg-dome)"/>
@@ -582,10 +608,10 @@ function boxArt(status, binState, style = "drum", minimal = false, catInside = f
       ${artOpening(100, 92, 41, 33)}
       ${ART_CAT()}`;
   }
-  const cls = [`art v-${style}`, minimal ? "min" : "", `s-${esc(status)}`, binState === "bin_full" ? "bin-full" : "", catInside ? "cat-in" : ""];
+  const cls = [`art v-${style}`, minimal ? "min" : "", cat ? "cat-always" : "", `s-${esc(status)}`, binState === "bin_full" ? "bin-full" : "", catInside ? "cat-in" : ""];
   const paint = catPaint(catColor);
-  const vars = paint ? `style="--cat-color:${paint.color};--cat-eye:${paint.eye}"` : "";
-  return `<div class="${cls.filter(Boolean).join(" ")}" ${vars} aria-hidden="true">
+  const vars = [paint ? `--cat-color:${paint.color};--cat-eye:${paint.eye}` : "", boxPaint(boxColor)].filter(Boolean).join(";");
+  return `<div class="${cls.filter(Boolean).join(" ")}" ${vars ? `style="${vars}"` : ""} aria-hidden="true">
     <svg viewBox="0 0 200 150">${shape}</svg>
     ${badge ? `<span class="art-badge"><ha-icon icon="${badge}"></ha-icon></span>` : ""}
   </div>`;
@@ -604,7 +630,7 @@ const ALERT_ICONS = {
 };
 
 class UahpetLitterboxCard extends LitterCard {
-  static defaults = { show_art: true, art_style: "drum", art_minimal: false, show_stats: true, show_cats: true, show_actions: true, show_quick: true };
+  static defaults = { show_art: true, art_style: "drum", show_stats: true, show_cats: true, show_actions: true, show_quick: true };
   static getConfigElement() { return document.createElement("uahpet-litterbox-card-editor"); }
 
   extraKey() {
@@ -678,7 +704,7 @@ class UahpetLitterboxCard extends LitterCard {
 
     return `
       <div class="hero ${c.show_art ? "" : "no-art"}">
-        ${c.show_art ? boxArt(status, bin?.state, c.art_style, c.art_minimal, !BUSY.includes(status) && num(this._state("cat_weight")) > 0.3, c.cat_color) : ""}
+        ${c.show_art ? boxArt(status, bin?.state, c.art_style, c.art_minimal, !BUSY.includes(status) && num(this._state("cat_weight")) > 0.3, c.cat_color, c.box_color) : ""}
         <div class="hero-text">
           <div class="title">${esc(this.cardTitle("c_main"))}</div>
           <button class="status ${STATUS_TONE[status] || "ok"}" data-act="info" data-key="work_status">${esc(t(h, this.burying() ? "st_burying" : `st_${status}`))}</button>
@@ -1833,11 +1859,12 @@ const STYLE = `<style>
   .hole { fill: var(--box-hole); } .litter { fill: var(--box-litter); } .led { fill: #a8f2d6; }
   .drum circle { fill: none; stroke: rgba(255,255,255,.26); stroke-width: 3; stroke-dasharray: 7 9; }
   .drum { transform-box: fill-box; transform-origin: center; } .grains, .wave { transform-box: view-box; }
-  .screen { fill: #2b3138; } .steel-rim { fill: #f1f4f6; } .v-cube .base { fill: #6e7a86; }
+  .screen { fill: #2b3138; } .steel-rim { fill: #f1f4f6; } .v-cube .base { fill: var(--steel-base, #6e7a86); }
   .grains circle { fill: var(--box-litter); opacity: 0; }
   /* the cat inside, peeking out (live weight says a cat is in) */
   .peek-head { fill: var(--cat-color, #f7f1e7); } .peek-ear { fill: #f3b8b0; } .peek-eye { fill: var(--cat-eye, var(--box-hole)); } .peek-nose { fill: #e58f86; }
-  .peek { opacity: 0; transition: opacity .4s; } .art.cat-in .peek { opacity: 1; }
+  .peek { opacity: 0; transition: opacity .4s; } .art.cat-in .peek, .art.cat-always .peek { opacity: 1; }
+  .art.cat-always.s-cleaning .peek, .art.cat-always.s-clearing .peek, .art.cat-always.s-leveling .peek { opacity: 0; }
   /* the cat next to the box: a cat nearby (radar) */
   .cat path { fill: var(--cat-color, var(--primary-text-color)); opacity: .8; } .cat .eye { fill: var(--cat-eye, var(--card-background-color, #fff)); }
   .cat { opacity: 0; transition: opacity .3s; }
@@ -2083,7 +2110,10 @@ const STYLE = `<style>
 const define = (name, cls) => { if (!customElements.get(name)) customElements.define(name, cls); };
 const D = (cls) => cls.defaults;
 define("uahpet-litterbox-card", UahpetLitterboxCard);
-define("uahpet-litterbox-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, bool("show_art"), choice(h, "art_style", ART_STYLES, (v) => `art_${v}`), bool("art_minimal"), { name: "cat_color", selector: { color_rgb: {} } }, bool("show_stats"), bool("show_cats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
+define("uahpet-litterbox-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, bool("show_art"), { name: "art_style", selector: { select: { mode: "dropdown", options: ART_STYLES.map((v) => {
+    const [m, variant] = v.split("-");
+    return { value: v, label: t(h, `art_${m}`) + (variant ? ` – ${t(h, `art_v_${variant}`)}` : "") };
+  }) } } }, { name: "box_color", selector: { color_rgb: {} } }, { name: "cat_color", selector: { color_rgb: {} } }, bool("show_stats"), bool("show_cats"), bool("show_actions"), bool("show_quick")], D(UahpetLitterboxCard)));
 define("uahpet-litterbox-timeline-card", UahpetLitterboxTimelineCard);
 define("uahpet-litterbox-timeline-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD,
   choice(h, "range", ["today", "24h"], (v) => (v === "today" ? "timeline" : "last24")),
