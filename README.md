@@ -32,6 +32,8 @@ Home Assistant support for **UAHPET** pet devices. UAHPET devices run on Tuya, b
 <td><img src="docs/images/maintenance.png" alt="Maintenance card" width="380"><br><b>Maintenance</b>: waste bin and how to fix each alert</td></tr>
 <tr><td><img src="docs/images/settings.png" alt="Settings card" width="380"><br><b>Settings</b>, with the app's explanations</td>
 <td><img src="docs/images/purifier.png" alt="Air purifier card" width="380"><br><b>Air purifier</b> (Tuya integration entities)<br><br><img src="docs/images/purifier-mini.png" alt="Compact air purifier" width="380"><br><b>Compact air purifier</b></td></tr>
+<tr><td><img src="docs/images/purifier-bar-dark.png" alt="Air purifier with buttons, dark theme" width="380"><br><b>Air purifier, buttons</b> (dark theme): status line with the air quality, round buttons</td>
+<td><img src="docs/images/purifier-bar-panel.png" alt="Air purifier with buttons, settings open" width="380"><br>…with <i>Settings</i> open: speed, timer, child lock, filter reset</td></tr>
 </table>
 
 Rendered from the real cards with sample data.
@@ -124,6 +126,7 @@ The cards load automatically with the integration and follow the UAHPET app. Add
 | `custom:uahpet-visits-card` | Recent visits with cat, weight, duration and why unidentified ones were not matched. `collapsible: true`, `count`, `expanded_count`, whole history |
 | `custom:uahpet-visits-chart-card` | Visits per day with one bar per cat, 7 or 30 days, tap a day / a cat |
 | `custom:uahpet-weight-chart-card` | Weight of each cat over time, one line per cat in its colour, 7 / 30 / 90 days; the legend shows the latest weight and the change; tap for the values |
+| `custom:uahpet-purifier-bar-card` | Air purifier: one status line (on/off, mode, filter, display when the purifier has one, air quality) and a row of round buttons: power, auto, next speed, settings (speed, timer, child lock, filter reset), sleep |
 | `custom:uahpet-purifier-mini-card` | Air purifier in one row: state, air quality, filter, power button |
 | `custom:uahpet-purifier-card` | Air purifier (Tuya integration entities, XTend Tuya works too): power, air quality, filter life, mode, speed, timer, child lock and filter reset. A tilt over 45° (`tipping`) shows as an alert |
 

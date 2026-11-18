@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
@@ -13,6 +13,8 @@ const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_vis
 const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", cancel: "Cancel", confirm_btn: "Continue",
+    air_short: "Air", display: "Display", display_on: "Display on", display_off: "Display off", auto_mode: "Auto", sleep_mode_p: "Sleep",
+    next_speed: "Next speed", more_settings: "Settings", c_purifier_bar: "UAHPET air purifier (buttons)", c_purifier_bar_d: "Status line with air quality and a row of round buttons.",
     weight_chart: "Weight", change: "{v} kg in {n} days", ed_layout: "Layout", ed_avatar_size: "Photo size (px)", ed_show_photo: "Show photo",
     lay_horizontal: "Horizontal", lay_vertical: "Vertical", c_weight: "UAHPET weight per cat", c_weight_d: "Weight of each cat over time, one line per cat.",
     hide_unk: "Hide unidentified", show_unk: "Show unidentified ({n})", clear_unk: "Clear unidentified",
@@ -103,6 +105,8 @@ const I18N = {
   },
   es: {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", cancel: "Cancelar", confirm_btn: "Continuar",
+    air_short: "Aire", display: "Pantalla", display_on: "Pantalla encendida", display_off: "Pantalla apagada", auto_mode: "Auto", sleep_mode_p: "Noche",
+    next_speed: "Siguiente velocidad", more_settings: "Ajustes", c_purifier_bar: "Purificador UAHPET (botones)", c_purifier_bar_d: "Línea de estado con la calidad del aire y una fila de botones redondos.",
     weight_chart: "Peso", change: "{v} kg en {n} días", ed_layout: "Disposición", ed_avatar_size: "Tamaño de la foto (px)", ed_show_photo: "Mostrar foto",
     lay_horizontal: "Horizontal", lay_vertical: "Vertical", c_weight: "Peso por gato UAHPET", c_weight_d: "Peso de cada gato a lo largo del tiempo, una línea por gato.",
     hide_unk: "Ocultar sin identificar", show_unk: "Mostrar sin identificar ({n})", clear_unk: "Borrar sin identificar",
@@ -1524,6 +1528,79 @@ class UahpetPurifierMiniCard extends UahpetPurifierCard {
   }
 }
 
+/* ---------- air purifier: status line + round buttons ---------- */
+
+const SPEED_ICONS = ["mdi:fan-chevron-down", "mdi:fan-speed-1", "mdi:fan-speed-2", "mdi:fan-speed-3"];
+
+class UahpetPurifierBarCard extends UahpetPurifierCard {
+  static defaults = {};
+  static getConfigElement() { return document.createElement("uahpet-purifier-bar-card-editor"); }
+  getCardSize() { return 2; }
+
+  handle(act, key, val) {
+    if (act === "panel") this._panel = !this._panel;
+    else if (act === "cycle") {
+      const fan = this._state("fan"), speeds = fan ? this._speeds(fan) : [];
+      if (!speeds.length) return;
+      const pct = Number(fan.attributes.percentage) || 0;
+      const idx = pct ? Math.max(0, Math.ceil((pct * speeds.length) / 100) - 1) : -1;
+      this._call("fan", "set_percentage", "fan", { percentage: speeds[(idx + 1) % speeds.length].pct });
+    } else super.handle(act, key, val);
+  }
+
+  extraKey() { return `${this._panel}`; }
+
+  body() {
+    const h = this._hass, c = this._config;
+    if (!this._map.fan) return `<div class="empty">${esc(t(h, "purifier_not_found"))}</div>`;
+    const fan = this._state("fan"), offline = isOff(fan), on = fan?.state === "on";
+    const pct = Number(fan?.attributes.percentage) || 0, mode = fan?.attributes.preset_mode, tilted = mode === TILT_MODE;
+    const speeds = fan ? this._speeds(fan) : [];
+    const speedIdx = speeds.length && pct ? Math.max(0, Math.ceil((pct * speeds.length) / 100) - 1) : -1;
+    const aq = this._state("air_quality"), filter = this._state("filter_utilization");
+    // a display / backlight light, when the purifier has one (the UAHPET Slim does not)
+    const display = this._state("backlight") || this._state("light");
+    const aqTone = known(aq) ? AQ_TONE[aq.state] || "ok" : "idle";
+    const line = offline ? t(h, "offline") : tilted ? t(h, "tilted") : [
+      t(h, on ? "on" : "off"),
+      on && mode ? t(h, `mode_${mode}`) : "",
+      known(filter) ? `${t(h, "filter")} ${fmtNum(h, num(filter), 1)} %` : "",
+      known(display) ? t(h, display.state === "on" ? "display_on" : "display_off") : "",
+      known(aq) ? `${t(h, "air_short")}: ${t(h, `aq_${aq.state}`)}` : "",
+    ].filter(Boolean).join(" · ");
+    const dis = offline ? "disabled" : "";
+    const btn = (act, icon, label, active, extra = "") =>
+      `<button class="pbtn ${active ? "on" : ""}" data-act="${act}" ${extra} aria-label="${esc(label)}" aria-pressed="${!!active}" title="${esc(label)}" ${dis}><ha-icon icon="${icon}"></ha-icon></button>`;
+    const modes = fan?.attributes.preset_modes || [];
+    const buttons = [
+      btn("power", "mdi:power", t(h, "power"), on),
+      modes.includes("auto") ? btn("mode", "mdi:fan-auto", t(h, "auto_mode"), on && mode === "auto", 'data-val="auto"') : "",
+      speeds.length ? btn("cycle", (speeds.length === 4 ? SPEED_ICONS : SPEED_ICONS.slice(1))[Math.max(0, speedIdx)] || "mdi:fan", t(h, "next_speed"), on && mode === "manual") : "",
+      `<button class="pbtn ${this._panel ? "on" : ""}" data-act="panel" aria-label="${esc(t(h, "more_settings"))}" aria-expanded="${!!this._panel}" title="${esc(t(h, "more_settings"))}"><ha-icon icon="mdi:tune-variant"></ha-icon></button>`,
+      modes.includes("sleep") ? btn("mode", "mdi:sleep", t(h, "sleep_mode_p"), on && mode === "sleep", 'data-val="sleep"') : "",
+    ].join("");
+    let panel = "";
+    if (this._panel) {
+      const timer = this._state("countdown"), lock = this._state("child_lock"), reset = this._map.filter_cartridge_reset;
+      const seg = (act, items, active) => `<div class="seg">${items.map(([val, label]) => `<button class="${val === active ? "on" : ""}" data-act="${act}" data-val="${esc(val)}" ${dis}><span>${esc(label)}</span></button>`).join("")}</div>`;
+      panel = `<div class="ppanel">
+        ${speeds.length ? `<div class="group"><div class="glabel">${esc(t(h, "speed"))}</div>${seg("speed", speeds.map((x) => [String(x.pct), x.label]), on && speedIdx >= 0 ? String(speeds[speedIdx].pct) : null)}</div>` : ""}
+        ${timer?.attributes.options?.length ? `<div class="group"><div class="glabel">${esc(t(h, "timer"))}</div>${seg("timer", timer.attributes.options.map((o) => [o, o === "cancel" ? t(h, "timer_cancel") : o]), timer.state)}</div>` : ""}
+        ${lock || reset ? `<div class="toggles">
+          ${lock ? `<button class="toggle ${lock.state === "on" ? "on" : ""}" data-act="toggle" data-key="child_lock" ${dis}><ha-icon icon="mdi:lock-outline"></ha-icon>${esc(t(h, "child_lock"))}</button>` : ""}
+          ${reset ? `<button class="toggle ${this._armed === "filter_cartridge_reset" ? "armed" : ""}" data-act="reset" data-key="filter_cartridge_reset" ${dis}><ha-icon icon="mdi:restore"></ha-icon>${esc(t(h, this._armed === "filter_cartridge_reset" ? "confirm" : "filter_reset"))}</button>` : ""}
+        </div>` : ""}</div>`;
+    }
+    return `<div class="head">
+        <button class="badge ${tilted || offline ? "bad" : aqTone}" data-act="info" data-key="${known(aq) ? "air_quality" : "fan"}">
+          <ha-icon class="${on ? "spin" : ""}" style="animation-duration:${(3.2 - 2.4 * (pct / 100)).toFixed(2)}s" icon="${offline ? "mdi:lan-disconnect" : "mdi:fan"}"></ha-icon></button>
+        <div class="titles"><div class="title">${esc(c.title || this._deviceName(this._dev) || t(h, "c_purifier"))}</div>
+          <div class="sub ${tilted ? "bad-text" : ""}">${esc(line)}</div></div>
+      </div>
+      <div class="pbar">${buttons}</div>${panel}`;
+  }
+}
+
 /* ---------- styles ---------- */
 
 const STYLE = `<style>
@@ -1755,6 +1832,11 @@ const STYLE = `<style>
     background: var(--bad); color: var(--text-primary-color, #fff); flex: none; }
   .ok-mark { color: var(--ok); flex: none; }
   .bad-text { color: var(--bad); }
+  .pbar { display: flex; justify-content: space-around; align-items: center; gap: 6px; padding: 8px; border-radius: 28px; background: var(--soft); }
+  .pbtn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); flex: none; }
+  .pbtn.on { color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 14%, transparent); }
+  .pbtn[data-act="power"].on { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+  .ppanel { display: flex; flex-direction: column; gap: 12px; }
   @media (max-width: 420px) { .art { width: 104px; } .stats.three { grid-template-columns: 1fr 1fr; } }
 </style>`;
 
@@ -1801,6 +1883,8 @@ define("uahpet-litterbox-maintenance-mini-card", UahpetMaintenanceMiniCard);
 define("uahpet-litterbox-maintenance-mini-card-editor", makeEditor(() => [DEVICE_FIELD]));
 define("uahpet-purifier-mini-card", UahpetPurifierMiniCard);
 define("uahpet-purifier-mini-card-editor", makeEditor(() => [PURIFIER_DEVICE_FIELD, TITLE_FIELD]));
+define("uahpet-purifier-bar-card", UahpetPurifierBarCard);
+define("uahpet-purifier-bar-card-editor", makeEditor(() => [PURIFIER_DEVICE_FIELD, TITLE_FIELD]));
 define("uahpet-purifier-card", UahpetPurifierCard);
 define("uahpet-purifier-card-editor", makeEditor(() => [PURIFIER_DEVICE_FIELD, TITLE_FIELD, bool("show_modes"), bool("show_speed"), bool("show_timer"), bool("show_extras")], D(UahpetPurifierCard)));
 
@@ -1811,7 +1895,7 @@ for (const [type, name] of [
   ["uahpet-litterbox-settings-card", "c_settings"], ["uahpet-litterbox-maintenance-card", "c_maint"], ["uahpet-litterbox-mini-card", "c_mini"],
   ["uahpet-litterbox-maintenance-mini-card", "c_maint_mini"],
   ["uahpet-cats-card", "c_cats"], ["uahpet-cat-card", "c_cat"], ["uahpet-visits-card", "c_visits"], ["uahpet-visits-chart-card", "c_chart"], ["uahpet-weight-chart-card", "c_weight"],
-  ["uahpet-purifier-card", "c_purifier"], ["uahpet-purifier-mini-card", "c_purifier_mini"],
+  ["uahpet-purifier-card", "c_purifier"], ["uahpet-purifier-bar-card", "c_purifier_bar"], ["uahpet-purifier-mini-card", "c_purifier_mini"],
 ]) {
   if (!window.customCards.some((c) => c.type === type)) {
     window.customCards.push({ type, name: tl(name), description: tl(`${name}_d`), preview: true, documentationURL: DOCS });
