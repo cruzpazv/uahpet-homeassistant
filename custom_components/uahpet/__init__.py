@@ -17,6 +17,7 @@ from .frontend import async_register_cards
 PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.EVENT,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
@@ -34,6 +35,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: UahpetConfigEntry) -> bool:
     coordinator = UahpetCoordinator(hass, entry)
+    await coordinator.async_load()
     coordinator.client.start()
     try:
         async with asyncio.timeout(FIRST_DATA_TIMEOUT):

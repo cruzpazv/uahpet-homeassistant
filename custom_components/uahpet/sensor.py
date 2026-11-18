@@ -25,7 +25,10 @@ class UahpetSensor(UahpetEntity, SensorEntity):
 
     @property
     def native_value(self) -> Any:
-        return self.entity_description.value_fn(self.coordinator.data)
+        desc = self.entity_description
+        if desc.derived_fn:
+            return desc.derived_fn(self.coordinator.tracker) if self.coordinator.tracker else None
+        return desc.value_fn(self.coordinator.data) if desc.value_fn else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:

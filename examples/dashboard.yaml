@@ -1,4 +1,4 @@
-# Example view. device_id is optional: without it the cards pick the first UAHPET litter box.
+# Example view. device_id is optional: without it the cards pick the first UAHPET device.
 title: Litter box
 path: litter-box
 type: sections
@@ -6,15 +6,15 @@ sections:
   - type: grid
     cards:
       - type: custom:uahpet-litterbox-card
-        show_alerts: true
-        show_actions: true
-        show_toggles: true
-      - type: custom:uahpet-litterbox-settings-card
-        show_advanced: false
+      - type: custom:uahpet-litterbox-maintenance-card
+      - type: custom:uahpet-litterbox-mini-card
   - type: grid
     cards:
-      - type: custom:uahpet-litterbox-history-card
-        days: 30
+      - type: custom:uahpet-litterbox-timeline-card
+      - type: custom:uahpet-litterbox-stats-card
+  - type: grid
+    cards:
+      - type: custom:uahpet-litterbox-settings-card
   - type: grid
     cards:
       # One card per purifier. Pick each device in the card editor (device_id).

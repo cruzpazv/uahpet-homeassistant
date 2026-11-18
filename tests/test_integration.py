@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.uahpet.const import CONF_DEVICE_ID, CONF_LOCAL_KEY, CONF_PROFILE, CONF_PROTOCOL, DOMAIN
 
@@ -100,3 +103,35 @@ async def test_push_alerts_and_offline(hass: HomeAssistant, fake_client) -> None
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert client.stopped
+
+
+async def test_derived_sensors_and_visit_event(hass: HomeAssistant, fake_client) -> None:
+    await _setup(hass)
+    client = fake_client.instances[0]
+    st = lambda p, k: hass.states.get(_eid(hass, p, k))  # noqa: E731
+    assert st("sensor", "cleanings_today").state == "0"
+    assert st("event", "visit").state == "unknown"
+
+    # a visit: counter + weight + duration arrive, the event fires once they settle
+    client.on_dps({"7": 9, "106": 43})
+    client.on_dps({"8": 37})
+    await hass.async_block_till_done()
+    assert st("sensor", "next_auto_clean").state not in ("unknown", "unavailable")
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=6))
+    await hass.async_block_till_done()
+    visit = st("event", "visit")
+    assert visit.attributes["event_type"] == "visit"
+    assert visit.attributes["weight"] == 4.3 and visit.attributes["duration"] == 37
+
+    # auto clean starts
+    client.on_dps({"108": "cleaning"})
+    await hass.async_block_till_done()
+    assert st("sensor", "cleanings_today").state == "1"
+    assert st("sensor", "last_cleaning").state not in ("unknown", "unavailable")
+    assert st("sensor", "next_auto_clean").state == "unknown"
+
+    # bin taken out and put back
+    client.on_dps({"113": "bin_uninstalled"})
+    client.on_dps({"113": "bin_normal"})
+    await hass.async_block_till_done()
+    assert st("sensor", "last_bin_emptied").state not in ("unknown", "unavailable")

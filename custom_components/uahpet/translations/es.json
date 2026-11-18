@@ -53,7 +53,7 @@
         "name": "Sin peso detectado"
       },
       "stagnant": {
-        "name": "Estancamiento"
+        "name": "Gato demasiado tiempo dentro"
       },
       "not_in_place": {
         "name": "Fuera de posición"
@@ -164,6 +164,18 @@
       },
       "log_code": {
         "name": "Código del registro de trabajo"
+      },
+      "cleanings_today": {
+        "name": "Limpiezas hoy"
+      },
+      "last_cleaning": {
+        "name": "Última limpieza"
+      },
+      "next_auto_clean": {
+        "name": "Próxima limpieza automática"
+      },
+      "last_bin_emptied": {
+        "name": "Último vaciado del cubo"
       }
     },
     "switch": {
@@ -171,7 +183,7 @@
         "name": "Limpieza automática"
       },
       "sleep_mode": {
-        "name": "Modo noche"
+        "name": "No molestar"
       },
       "child_lock": {
         "name": "Bloqueo infantil"
@@ -190,6 +202,18 @@
       },
       "developer_mode": {
         "name": "Modo desarrollador"
+      }
+    },
+    "event": {
+      "visit": {
+        "name": "Visita",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "visit": "Visita"
+            }
+          }
+        }
       }
     }
   }

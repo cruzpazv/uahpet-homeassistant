@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,6 +30,9 @@ class Profile:
     buttons: tuple[UahpetButtonDescription, ...] = ()
     numbers: tuple[UahpetNumberDescription, ...] = ()
     selects: tuple[UahpetSelectDescription, ...] = ()
+    # Derived values (see tracker.py) and the visit event, when the device has them.
+    tracker_factory: Callable[[], Any] | None = None
+    visit_data: Callable[[dict[str, Any]], dict[str, Any]] | None = None
 
     def matches(self, dps: dict[str, Any]) -> bool:
         return self.signature <= set(dps)

@@ -53,7 +53,7 @@
         "name": "No weight detected"
       },
       "stagnant": {
-        "name": "Stagnant"
+        "name": "Cat stayed too long"
       },
       "not_in_place": {
         "name": "Not in place"
@@ -164,6 +164,18 @@
       },
       "log_code": {
         "name": "Work log code"
+      },
+      "cleanings_today": {
+        "name": "Cleanings today"
+      },
+      "last_cleaning": {
+        "name": "Last cleaning"
+      },
+      "next_auto_clean": {
+        "name": "Next auto clean"
+      },
+      "last_bin_emptied": {
+        "name": "Waste bin last emptied"
       }
     },
     "switch": {
@@ -171,7 +183,7 @@
         "name": "Auto clean"
       },
       "sleep_mode": {
-        "name": "Sleep mode"
+        "name": "Do not disturb"
       },
       "child_lock": {
         "name": "Child lock"
@@ -190,6 +202,18 @@
       },
       "developer_mode": {
         "name": "Developer mode"
+      }
+    },
+    "event": {
+      "visit": {
+        "name": "Visit",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "visit": "Visit"
+            }
+          }
+        }
       }
     }
   }

@@ -60,10 +60,14 @@ Settings → Devices & services → Add integration → **UAHPET**: device ID an
 | Sensor *Status* | 108 | Standby, cleaning, emptying, levelling, weighing error, cat detected, waiting for litter to clump |
 | Sensor *Waste bin* | 113 | OK, full, missing, cover open |
 | Sensor *Active alerts* | 21, 22 | Number of active alerts, attribute `alerts` |
-| Binary sensors (8) | 21, 22 | Too many visits, no weight, stagnant, not in place, weighing error, bin cover open, bin full, motor fault |
+| Sensor *Cleanings today* | derived | Counted from the status changes, resets at midnight |
+| Sensor *Last cleaning* / *Next auto clean* | derived | Timestamps. Next auto clean = end of visit + clean delay (not set when auto clean or Do not disturb stop it) |
+| Sensor *Waste bin last emptied* | derived | When the bin goes back to OK after being full or taken out |
+| Event *Visit* | 7, 8, 106 | One event per visit with `weight` (kg) and `duration` (s) |
+| Binary sensors (8) | 21, 22 | Too many visits, no weight, cat stayed too long, not in place, weighing error, bin cover open, bin full, motor fault |
 | Button *Clean* / *Level litter* / *Empty litter* | 3 / 103 / 107 | |
 | Switch *Auto clean* | 4 | |
-| Switch *Sleep mode* | 101 | |
+| Switch *Do not disturb* | 101 | No automatic cleaning while on |
 | Switch *Child lock* | 102 | |
 | Switch *Ionizer* | 114 | |
 | Switch *Radar* | 115 | Presence radar |
@@ -77,39 +81,46 @@ Settings → Devices & services → Add integration → **UAHPET**: device ID an
 
 Not exposed: DP 20 (cloud schedules, raw) and DP 109/110 (pound copies of the weights; Home Assistant converts units itself).
 
-Still unknown: the meaning of the *stagnant* alert and the packed format of DP 119 (`log_code` shows its bytes as attributes). Reports welcome.
+*Cat stayed too long* (`stagnant`): the litter box levels the litter to make the cat leave and resets the weight. Still unknown: the packed format of DP 119 (`log_code` shows its bytes as attributes). Reports welcome.
+
+Derived values are kept across restarts (stored per device).
 
 ## Dashboard cards
 
-The cards load automatically with the integration. Add them from the card picker (search "UAHPET") or in YAML. `device_id` is optional: without it each card uses the first matching device.
+The cards load automatically with the integration and follow the UAHPET app. Add them from the card picker (search "UAHPET"); all have a visual editor. `device_id` is optional: without it each card uses the first matching device. Texts in English and Spanish.
+
+| Card | What it shows |
+|---|---|
+| `custom:uahpet-litterbox-card` | Animated drawing of the litter box (drum turns while cleaning, litter waves while levelling, cat and radar pulse when a cat is nearby), status in the app's words, **auto clean countdown**, bin / litter / alert chips, today's visits, cleanings and last cat weight, Clean / Level / Empty (Level and Empty ask for confirmation like the app), quick toggles for auto clean and Do not disturb |
+| `custom:uahpet-litterbox-timeline-card` | Today's (or last 24 h) visits with duration and weight, cleanings, emptying, levelling, bin emptied and alerts. With [Litter Cat Identifier](https://github.com/cruzpazv/litter-cat-identifier) each visit shows the cat's name |
+| `custom:uahpet-litterbox-stats-card` | Visits, cleanings, visit duration and weight per day, 7 or 30 days. Tap a day for its value |
+| `custom:uahpet-litterbox-settings-card` | Cleaning (auto clean, clean delay with quick presets, bury delay), litter type, Do not disturb, radar, child lock, ionizer, visits alert and unit, each with the app's explanation. `show_advanced: true` adds manual motor control and developer mode |
+| `custom:uahpet-litterbox-maintenance-card` | Waste bin drawing and state, when it was last emptied and cleaned, and every active alert with how to fix it (plus a Level button where it helps) |
+| `custom:uahpet-litterbox-mini-card` | One row: status, visits today and a clean button |
+| `custom:uahpet-purifier-card` | Air purifier (Tuya integration entities, XTend Tuya works too): power, air quality, filter life, mode, speed, timer, child lock and filter reset. A tilt over 45° (`tipping`) shows as an alert |
 
 ```yaml
-type: custom:uahpet-litterbox-card       # status, alerts, actions, toggles
+type: custom:uahpet-litterbox-card
+show_stats: true
+show_actions: true
+show_quick: true
+```
+
+```yaml
+type: custom:uahpet-litterbox-timeline-card
+range: today            # or 24h
+max_items: 20
+show_cleanings: true
 show_alerts: true
-show_actions: true                        # Empty needs a second tap to confirm
-show_toggles: true
 ```
 
 ```yaml
-type: custom:uahpet-litterbox-settings-card
-show_advanced: false                      # true adds the hidden diagnostic and motor entities
+type: custom:uahpet-litterbox-stats-card
+days: 7                 # or 30
+metric: visits          # visits, cleanings, duration, weight
 ```
 
-```yaml
-type: custom:uahpet-litterbox-history-card
-days: 30                                  # cat weight per visit and visits per day
-```
-
-```yaml
-type: custom:uahpet-purifier-card         # entities from the Tuya integration (XTend Tuya works too)
-device_id: <the purifier's device>
-show_modes: true                          # manual / auto / sleep
-show_speed: true                          # sleep, 1, 2, 3
-show_timer: true                          # off, 2–10 h
-show_extras: true                         # child lock and filter reset (needs a second tap)
-```
-
-The purifier card shows power, air quality, remaining filter life (amber below 30 %, red below 15 %), mode, speed and timer. When the purifier tilts over 45° it reports the mode `tipping`: the card shows a "tipped over" alert instead of offering it as a mode. With several purifiers, add one card per purifier.
+The 0.1.0 `uahpet-litterbox-history-card` still works and now shows the statistics card.
 
 The cards are served by this integration, so at least one UAHPET device must be set up for them to load.
 

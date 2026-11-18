@@ -18,7 +18,10 @@ from ..descriptions import (
     UahpetSensorDescription,
     UahpetSwitchDescription,
 )
+from homeassistant.util import dt as dt_util
+
 from ..dps import active_bits, enum_value, get, int_bytes, scaled
+from ..tracker import LitterboxTracker
 from .base import Profile
 
 
@@ -63,6 +66,7 @@ WORK_LOG_STATES = [
     "level_a", "level_b", "level_c", "clear_a", "clear_b",
 ]
 NOTIFICATION_BITS = [
+    # stagnant: the cat stayed too long; the box levels the litter to make it leave (UAHPET app)
     "excessive_clean_times", "no_weight", "stagnant", "not_in_place",
     "e_weight", "bin_cover_open", "bin_full",
 ]
@@ -78,6 +82,10 @@ def _log_attrs(dps: dict[str, Any]) -> dict[str, Any]:
     return {"bytes": int_bytes(value), "hex": None if value is None else f"{int(value):08x}"}
 
 
+def _visit_data(dps: dict[str, Any]) -> dict[str, Any]:
+    return {"weight": scaled(get(dps, DP.LAST_CAT_WEIGHT), 1), "duration": get(dps, DP.VISIT_DURATION)}
+
+
 _CONFIG = EntityCategory.CONFIG
 _DIAG = EntityCategory.DIAGNOSTIC
 
@@ -87,6 +95,8 @@ LITTERBOX = Profile(
     model="Self-cleaning litter box",
     tuya_category="msp",
     product_ids=("y0kvbmrnprybewtd",),
+    tracker_factory=LitterboxTracker,
+    visit_data=_visit_data,
     signature=frozenset({str(DP.CAT_WEIGHT), str(DP.VISITS_TODAY), str(DP.VISIT_DURATION), str(DP.WORK_STATUS)}),
     sensors=(
         UahpetSensorDescription(
@@ -128,6 +138,26 @@ LITTERBOX = Profile(
             value_fn=lambda d: enum_value(get(d, DP.BIN_STATUS), BIN_STATUSES),
             device_class=SensorDeviceClass.ENUM,
             options=BIN_STATUSES,
+        ),
+        UahpetSensorDescription(
+            key="cleanings_today",
+            derived_fn=lambda t: t.cleanings(dt_util.now()),
+            state_class=SensorStateClass.TOTAL_INCREASING,
+        ),
+        UahpetSensorDescription(
+            key="last_cleaning",
+            derived_fn=lambda t: t.last_cleaning,
+            device_class=SensorDeviceClass.TIMESTAMP,
+        ),
+        UahpetSensorDescription(
+            key="next_auto_clean",
+            derived_fn=lambda t: t.next_auto_clean,
+            device_class=SensorDeviceClass.TIMESTAMP,
+        ),
+        UahpetSensorDescription(
+            key="last_bin_emptied",
+            derived_fn=lambda t: t.last_bin_emptied,
+            device_class=SensorDeviceClass.TIMESTAMP,
         ),
         UahpetSensorDescription(
             key="active_alerts",

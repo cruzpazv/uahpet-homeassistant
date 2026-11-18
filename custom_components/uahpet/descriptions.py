@@ -18,8 +18,9 @@ DPS = dict[str, Any]
 
 @dataclass(frozen=True, kw_only=True)
 class UahpetSensorDescription(SensorEntityDescription):
-    value_fn: Callable[[DPS], Any]
+    value_fn: Callable[[DPS], Any] | None = None
     attrs_fn: Callable[[DPS], dict[str, Any]] | None = None
+    derived_fn: Callable[[Any], Any] | None = None  # reads the profile's tracker instead of the DPs
 
 
 @dataclass(frozen=True, kw_only=True)
