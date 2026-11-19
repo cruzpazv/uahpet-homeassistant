@@ -62,8 +62,12 @@ Other UAHPET products (fountains, Nano Deodorizer, iRetriever, Pulse tracker) ar
 
 ## Install
 
-**HACS (custom repository)**
-HACS → ⋮ → Custom repositories → `https://github.com/cruzpazv/uahpet-homeassistant` → type *Integration* → Download → restart Home Assistant.
+[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cruzpazv&repository=uahpet-homeassistant&category=integration)
+
+**HACS**
+HACS → search for **UAHPET** → Download → restart Home Assistant.
+
+*Not listed yet?* The button above adds it for you, or add it as a custom repository: HACS → ⋮ → Custom repositories → `https://github.com/cruzpazv/uahpet-homeassistant` → type *Integration*.
 
 **Manual**
 Copy `custom_components/uahpet` into `config/custom_components/` and restart.
@@ -226,7 +230,7 @@ UAHPET can tell your cats apart on its own, like the UAHPET app.
 
 | Menu | What it does |
 |---|---|
-| *Add a cat* / *Edit a cat* | Name, approximate weight (then learned visit after visit), **photo** (pick or upload it from Media, or a URL / `/local/` path), **colour** (charts, icon without photo), notify every visit, alert after N hours without a visit |
+| *Add a cat* / *Edit a cat* | Name, approximate weight (then learned visit after visit), **photo** (pick or upload it from Media: stored by the integration and only served to logged-in users through short-lived signed links; or a URL / `/local/` path, which is public), **colour** (charts, icon without photo), notify every visit, alert after N hours without a visit |
 | *Identification settings* | Tolerance, learning rate, minimum weight, record unidentified visits or not |
 | *Notifications* | Notify services (e.g. `notify.mobile_app_my_phone`, photo attached), unidentified visits, health alerts |
 | *Import from Litter Cat Identifier* | Copies cats, learned weights, photos, colours, notifications, settings and the whole visit history. Afterwards Litter Cat Identifier can be removed |

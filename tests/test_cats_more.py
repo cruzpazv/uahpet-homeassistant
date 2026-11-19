@@ -100,16 +100,16 @@ async def test_entities_services_and_notifications(hass: HomeAssistant, fake_cli
     assert entry
 
 
-async def test_import_from_litter_cat_identifier(hass: HomeAssistant, fake_client, hass_storage, tmp_path) -> None:
+async def test_import_from_litter_cat_identifier(hass: HomeAssistant, fake_client, hass_storage, tmp_path, hass_client_no_auth) -> None:
     # a Litter Cat Identifier entry (not loaded) with its stored state and a photo it serves
     pics = Path(hass.config.path("litter_cat_identifier"))
     pics.mkdir(parents=True, exist_ok=True)
-    (pics / "abc.jpg").write_bytes(b"jpeg")
+    (pics / "0123456789ab.jpg").write_bytes(b"jpeg")
     lci = MockConfigEntry(
         domain="litter_cat_identifier", title="Arenero",
         data={"name": "Arenero", "weight_entity": "sensor.w", "cats": [{"name": "Luna", "weight": 3.8}, {"name": "Simba", "weight": 5.5}]},
         options={"tolerance": 0.8, "notify_targets": ["notify.phone"], "notify_health": False,
-                 "cat_options": {"Luna": {"picture": "/litter_cat_identifier_pictures/abc.jpg?v=1", "color": [225, 87, 89], "notify_visit": True, "alert_hours": 12}}},
+                 "cat_options": {"Luna": {"picture": "/api/litter_cat_identifier/picture/0123456789ab.jpg", "color": [225, 87, 89], "notify_visit": True, "alert_hours": 12}}},
     )
     lci.add_to_hass(hass)
     hist = [{"time": "2026-11-18T09:00:00+00:00", "cat": "Simba", "weight": 5.6, "duration": 40},
@@ -127,7 +127,12 @@ async def test_import_from_litter_cat_identifier(hass: HomeAssistant, fake_clien
 
     cats = {c["name"]: c for c in entry.options["cats"]}
     assert cats["Luna"]["weight"] == 3.91 and cats["Luna"]["alert_hours"] == 12 and cats["Luna"]["color"] == [225, 87, 89]
-    assert cats["Luna"]["picture"].startswith("/uahpet_pictures/")  # copied, survives removing Litter Cat Identifier
+    assert cats["Luna"]["picture"].startswith("/api/uahpet/picture/")  # copied, survives removing Litter Cat Identifier
+    # served to logged-in users only: entities hand out a signed URL
+    pic = hass.states.get(_eid(hass, "sensor", "cat_luna_weight")).attributes["entity_picture"]
+    anon = await hass_client_no_auth()
+    assert "authSig=" in pic and (await anon.get(pic)).status == 200
+    assert (await anon.get(cats["Luna"]["picture"])).status == 401
     assert entry.options["tolerance"] == 0.8 and entry.options["notify_health"] is False
     assert float(hass.states.get(_eid(hass, "sensor", "cat_simba_weight")).state) == 5.62
     last = hass.states.get(_eid(hass, "sensor", "last_visit"))

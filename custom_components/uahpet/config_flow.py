@@ -7,7 +7,6 @@ from typing import Any
 
 import voluptuous as vol
 
-from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_NAME
@@ -31,7 +30,7 @@ from homeassistant.helpers.selector import (
 
 from .cats import DEFAULT_MIN_WEIGHT, DEFAULT_SMOOTHING, DEFAULT_TOLERANCE, UNIDENTIFIED
 from .client import ProbeError, probe
-from .pictures import PictureError, async_copy_picture, async_delete_pictures, async_store_picture
+from .pictures import PictureError, async_copy_picture, async_delete_pictures, async_store_picture, lci_picture_file
 from .const import (
     CONF_CAT_ALERT_HOURS,
     CONF_CAT_COLOR,
@@ -195,7 +194,6 @@ def _kg(min_v: float, max_v: float, step: float) -> NumberSelector:
 
 PHOTO = MediaSelector(MediaSelectorConfig(accept=["image/*"]))
 LCI = "litter_cat_identifier"
-LCI_PICTURES = f"/{LCI}_pictures/"
 
 
 async def _resolve_picture(hass, user_input: dict[str, Any], current: str | None) -> str | None:
@@ -221,8 +219,7 @@ async def _import_lci(hass, lci) -> tuple[list[dict[str, Any]], dict[str, Any], 
     for c in lci.data.get("cats", []):
         name, o = c["name"], cat_opts.get(c["name"], {})
         picture = o.get("picture")
-        if picture and picture.startswith(LCI_PICTURES):  # copy it: it must survive removing Litter Cat Identifier
-            src = Path(hass.config.path(LCI)) / picture[len(LCI_PICTURES):].split("?", 1)[0]
+        if src := lci_picture_file(hass, picture):  # copy it: it must survive removing Litter Cat Identifier
             picture = await async_copy_picture(hass, src)
         cats.append({
             CONF_CAT_NAME: name, CONF_CAT_WEIGHT: round(float(learned.get(name, c["weight"])), 3),

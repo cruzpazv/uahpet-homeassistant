@@ -76,7 +76,7 @@ class CatSensor(UahpetEntity, SensorEntity):
 
     @property
     def entity_picture(self) -> str | None:
-        return (self.coordinator.cats.profiles.get(self.cat) or {}).get("picture") if self.cat else None
+        return self.coordinator.picture(self.cat)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
@@ -134,8 +134,7 @@ class LastVisitSensor(CatSensor):
 
     @property
     def entity_picture(self) -> str | None:
-        cat = self.native_value
-        return (self.coordinator.cats.profiles.get(cat) or {}).get("picture") if cat else None
+        return self.coordinator.picture(self.native_value)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

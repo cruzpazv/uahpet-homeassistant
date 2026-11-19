@@ -43,6 +43,7 @@ from .const import (
     DOMAIN,
 )
 from .messages import text
+from .pictures import REFRESH_EVERY, picture_url
 from .profiles import PROFILES_BY_KEY
 from .tracker import BIN_OPEN_GRACE
 
@@ -135,6 +136,10 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.config_entry.async_on_unload(
                 async_track_time_change(self.hass, self._on_midnight, hour=0, minute=0, second=1)
             )
+        if self.cats and any(p.get("picture") for p in self.cats.profiles.values()):
+            self.config_entry.async_on_unload(
+                async_track_time_interval(self.hass, self._refresh_pictures, REFRESH_EVERY)
+            )
         if self.cats and any(p["alert_hours"] for p in self.cats.profiles.values()):
             self.config_entry.async_on_unload(
                 async_track_time_interval(self.hass, self._check_inactivity, timedelta(minutes=10))
@@ -171,22 +176,27 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except Exception:  # noqa: BLE001 - one bad target must not stop the others
                 _LOGGER.exception("Failed to notify %s", target)
 
-    def _picture(self, cat: str | None) -> str | None:
-        return (self.cats.profiles.get(cat) or {}).get("picture") if self.cats and cat else None
+    def picture(self, cat: str | None) -> str | None:
+        """Photo URL for entities and notifications (our own photos come signed)."""
+        return picture_url(self.hass, (self.cats.profiles.get(cat) or {}).get("picture")) if self.cats and cat else None
+
+    @callback
+    def _refresh_pictures(self, _now: Any) -> None:
+        self.async_update_listeners()  # signed photo URLs expire: entities pick up a fresh one
 
     @callback
     def _notify_health(self, alerts: list[tuple[str, str, Any]]) -> None:
         if self.options.get(CONF_NOTIFY_HEALTH, True):
             lang = self.hass.config.language
             for cat, reason, value in alerts:
-                self._send(text(lang, f"health_{reason}", cat=cat, value=value), self._picture(cat))
+                self._send(text(lang, f"health_{reason}", cat=cat, value=value), self.picture(cat))
 
     @callback
     def _notify_visit(self, visit: dict[str, Any]) -> None:
         lang, cat = self.hass.config.language, visit["cat"]
         if cat in self.cats.profiles:
             if self.cats.profiles[cat]["notify_visit"]:
-                self._send(text(lang, "visit", cat=cat, weight=visit["weight"]), self._picture(cat))
+                self._send(text(lang, "visit", cat=cat, weight=visit["weight"]), self.picture(cat))
         elif self.options.get(CONF_NOTIFY_UNIDENTIFIED) and visit.get("reason"):
             self._send(text(lang, f"unidentified_{visit['reason']}", weight=visit["weight"], cat=visit.get("likely_cat") or ""))
         self._notify_health(visit.get("health", []))
@@ -197,7 +207,7 @@ class UahpetCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         lang = self.hass.config.language
         late = self.cats.inactive(dt_util.now(), hours)
         for cat, limit in late:
-            self._send(text(lang, "inactive", cat=cat, hours=f"{limit:g}"), self._picture(cat))
+            self._send(text(lang, "inactive", cat=cat, hours=f"{limit:g}"), self.picture(cat))
         if late:
             self._save()
 

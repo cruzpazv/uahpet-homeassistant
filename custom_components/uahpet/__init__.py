@@ -18,7 +18,7 @@ from .const import CONF_CAT_COLOR, CONF_CAT_NAME, CONF_CAT_PICTURE, CONF_CAT_WEI
 from .coordinator import UahpetConfigEntry, UahpetCoordinator
 from .cats import RECALIBRATE_SAMPLES
 from .frontend import async_register_cards
-from .pictures import async_register_static_path
+from .pictures import async_register_view
 from .sensor import cat_unique_suffixes
 
 PLATFORMS = [
@@ -126,7 +126,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         hass.config_entries.async_update_entry(entry, options={**entry.options, CONF_CATS: cats})
 
     hass.services.async_register(DOMAIN, "add_cat", _add_cat, schema=ADD_CAT_SCHEMA)
-    await async_register_static_path(hass)
+    await async_register_view(hass)
     await async_register_cards(hass)
     return True
 
