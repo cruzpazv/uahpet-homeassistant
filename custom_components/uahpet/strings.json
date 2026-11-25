@@ -377,8 +377,8 @@
           "record_unidentified": "Record unidentified visits"
         },
         "data_description": {
-          "tolerance": "Visits further than this from every cat are logged as unidentified.",
-          "smoothing": "How much each visit moves the learned weight (0 = never, 1 = jump to the latest reading).",
+          "tolerance": "Visits further than this from every cat are logged as unidentified (default 0.5 kg). A lighter reading right after a heavier cat's visit is taken as that cat half inside.",
+          "smoothing": "How much each visit moves the learned weight (0 = never, 1 = jumps to the reading). It moves towards the median of the latest readings, so one odd reading does not drag it.",
           "min_weight": "Filters out empty-box readings and noise.",
           "record_unidentified": "Off: visits that don't match any cat are ignored completely (no log, count or notification)."
         }

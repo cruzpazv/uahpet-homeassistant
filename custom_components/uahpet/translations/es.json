@@ -377,8 +377,8 @@
           "record_unidentified": "Registrar visitas sin identificar"
         },
         "data_description": {
-          "tolerance": "Las visitas más alejadas que esto de todos los gatos se registran como no identificadas.",
-          "smoothing": "Cuánto mueve cada visita el peso aprendido (0 = nunca, 1 = salta a la última lectura).",
+          "tolerance": "Las visitas más alejadas que esto de todos los gatos se registran como no identificadas (0,5 kg por defecto). Una lectura más ligera justo después de la visita de un gato más pesado se toma como ese gato medio dentro.",
+          "smoothing": "Cuánto mueve cada visita el peso aprendido (0 = nunca, 1 = salta a la lectura). Se mueve hacia la mediana de las últimas lecturas: una lectura rara no lo arrastra.",
           "min_weight": "Descarta lecturas con el arenero vacío y ruido.",
           "record_unidentified": "Desactivado: las visitas que no coinciden con ningún gato se ignoran por completo (sin registro, cuenta ni aviso)."
         }

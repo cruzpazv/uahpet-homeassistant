@@ -23,7 +23,7 @@ def _ci(**kw):
 
 
 def test_corrections():
-    ci = _ci()
+    ci = _ci(tolerance=1.0)
     ci.record(3.9, 30, T0)
     ci.record(6.6, 30, T0 + timedelta(hours=1))  # unidentified (just over the tolerance)
     ci.reassign_last("Simba")
@@ -138,3 +138,20 @@ async def test_import_from_litter_cat_identifier(hass: HomeAssistant, fake_clien
     last = hass.states.get(_eid(hass, "sensor", "last_visit"))
     assert last.state == "Simba" and len(last.attributes["history"]) == 2
     assert hass.states.get(_eid(hass, "sensor", "cat_luna_visits_today")).state == "1"
+
+
+def test_half_inside_after_a_heavier_cat_and_steady_learning():
+    # Mochi 6 kg and Pudin 3.6 kg: Mochi steps back in with half its body to cover its waste
+    ci = CatIdentifier(profiles={"Mochi": {"weight": 6.0}, "Pudin": {"weight": 3.6}})
+    ci.load(None)
+    assert ci.record(6.0, 45, T0)["cat"] == "Mochi"
+    v = ci.record(3.25, 17, T0 + timedelta(seconds=60))  # within the tolerance of Pudin, but right after Mochi
+    assert v["cat"] == "unidentified" and v["reason"] == "partial_after_visit" and v["likely_cat"] == "Mochi"
+    assert ci.record(2.4, 17, T0 + timedelta(seconds=90))["cat"] == "unidentified"  # outside ±0.5 kg
+    assert ci.learned["Pudin"] == 3.6
+    # Pudin itself right after Mochi, at its usual weight: still Pudin
+    assert ci.record(3.6, 50, T0 + timedelta(seconds=110))["cat"] == "Pudin"
+    # later, on its own: a light reading counts as Pudin but barely moves the learned weight (median)
+    for i, kg in enumerate((3.6, 3.7, 3.15, 3.6)):
+        assert ci.record(kg, 50, T0 + timedelta(hours=1 + i))["cat"] == "Pudin"
+    assert ci.learned["Pudin"] >= 3.6

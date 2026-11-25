@@ -18,10 +18,11 @@ HISTORY_SIZE = 20  # visits in the sensor attributes
 STORED_HISTORY = 2000  # visits kept on disk (cards read them over the websocket API)
 PARTIAL_WINDOW = 120  # s: a reading right after a cat's visit is probably that cat half inside
 
-DEFAULT_TOLERANCE = 1.0  # kg
+DEFAULT_TOLERANCE = 0.5  # kg
 DEFAULT_SMOOTHING = 0.2
 DEFAULT_MIN_WEIGHT = 0.5  # kg
 RECALIBRATE_SAMPLES = 5
+LEARN_SAMPLES = 5  # learn towards the median of the latest readings: one odd reading does not drag the weight
 
 
 def identify(weight: float, learned: dict[str, float], tolerance: float) -> str | None:
@@ -153,6 +154,11 @@ class CatIdentifier:
         alerts = self.roll(now)
         kg = weight if weight is not None and weight >= self.min_weight else None
         cat = identify(kg, self.learned, self.tolerance) if kg is not None and self.learned else None
+        if cat and (other := self._half_inside(cat, kg, now)):
+            cat = None  # lighter than the cat, right after another (heavier) cat's visit
+            partial_of = other
+        else:
+            partial_of = None
         if cat is None and not self.record_unidentified:
             return None
         visit: dict[str, Any] = {
@@ -160,9 +166,11 @@ class CatIdentifier:
             "weight": round(kg, 2) if kg is not None else None, "duration": duration,
         }
         if cat:
-            self.learned[cat] = round(learn(self.learned[cat], kg, self.smoothing), 3)
+            self.learned[cat] = round(learn(self.learned[cat], self._typical(cat, kg), self.smoothing), 3)
             self.last_visit[cat] = visit["time"]
             self.alerted[cat] = False
+        elif partial_of:
+            visit["reason"], visit["likely_cat"] = "partial_after_visit", partial_of
         else:
             visit["reason"], visit["likely_cat"] = self._why(kg, now, device_reason)
         self.visits_today[visit["cat"]] = self.visits_today.get(visit["cat"], 0) + 1
@@ -215,6 +223,23 @@ class CatIdentifier:
         self.history = [v for v in self.history if v["cat"] != UNIDENTIFIED]
         self.visits_today[UNIDENTIFIED] = 0
         return before - len(self.history)
+
+    def _typical(self, cat: str, kg: float) -> float:
+        """Median of this reading and the cat's latest ones: what the learned weight moves towards."""
+        recent = [v["weight"] for v in self.history if v["cat"] == cat and v["weight"] is not None][: LEARN_SAMPLES - 1]
+        return median([kg, *recent])
+
+    def _half_inside(self, cat: str, kg: float, now: datetime) -> str | None:
+        """A reading well under `cat`'s weight right after a heavier cat left: that cat
+        stepping back in with half its body (e.g. to cover its waste). Returns that cat."""
+        prev = next((v for v in self.history if v["cat"] != UNIDENTIFIED), None)
+        if not prev or prev["cat"] == cat or prev.get("weight") is None:
+            return None
+        if (now - datetime.fromisoformat(prev["time"])).total_seconds() > PARTIAL_WINDOW:
+            return None
+        if kg < self.learned[cat] - self.tolerance / 2 and kg < prev["weight"]:
+            return prev["cat"]
+        return None
 
     def _why(self, kg: float | None, now: datetime, device_reason: str | None) -> tuple[str, str | None]:
         if device_reason:

@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.8.1";
+const VERSION = "0.8.2";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
@@ -796,7 +796,9 @@ class UahpetLitterboxTimelineCard extends LitterCard {
       if (isNaN(ts) || ts < start || !attrs.event_type) continue;
       const match = attrs.cat ? { cat: attrs.cat } : cats.find((v) => Math.abs(v.ts - ts) < 120000);
       const cat = match ? (match.cat === "unidentified" ? t(h, "unidentified") : match.cat) : null;
-      items.push({ ts, kind: "visit", icon: "mdi:paw", duration: attrs.duration, weight: attrs.weight, cat });
+      const i = src && match ? src.cats.findIndex((x) => x.name === match.cat) : -1;
+      const color = i >= 0 ? catColor(h, src.cats[i], i, this._config) : match?.cat === "unidentified" ? GREY : null;
+      items.push({ ts, kind: "visit", icon: "mdi:paw", duration: attrs.duration, weight: attrs.weight, cat, color });
     }
     // cleanings, emptying, levelling. A "cleaning" well before the clean delay after a visit is the
     // litter box burying the waste, not the automatic clean that follows the delay.
@@ -876,7 +878,7 @@ class UahpetLitterboxTimelineCard extends LitterCard {
       }
       const extra = e.kind === "visit" && e.weight ? `<span class="tl-w">${esc(fmtNum(h, e.weight))} kg</span>` : "";
       return `${sep}<li class="tl-${e.kind}"><span class="tl-time">${esc(fmtClock(h, d))}</span>
-        <span class="tl-dot"><ha-icon icon="${e.icon}"></ha-icon></span><span class="tl-text">${esc(text)}</span>${extra}</li>`;
+        <span class="tl-dot"${e.color ? ` style="--cat:${esc(e.color)}"` : ""}><ha-icon icon="${e.icon}"></ha-icon></span><span class="tl-text">${esc(text)}</span>${extra}</li>`;
     }).join("");
     return `${head}${summary ? `<div class="sub summary">${esc(summary)}</div>` : ""}
       ${rows ? `<ul class="timeline">${rows}</ul>` : `<div class="empty">${esc(t(h, "no_events"))}</div>`}`;
@@ -1962,7 +1964,7 @@ const STYLE = `<style>
   .tl-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; z-index: 1;
     background: var(--card-background-color, #fff); border: 2px solid var(--divider-color); }
   .tl-dot ha-icon { --mdc-icon-size: 16px; }
-  .tl-visit .tl-dot { border-color: var(--primary-color); color: var(--primary-color); }
+  .tl-visit .tl-dot { border-color: var(--cat, var(--primary-color)); color: var(--cat, var(--primary-color)); }
   .tl-alert .tl-dot { border-color: var(--bad); color: var(--bad); }
   .tl-status .tl-dot, .tl-bin .tl-dot, .tl-bury .tl-dot { color: var(--muted); }
   .tl-bury .tl-text { color: var(--muted); font-size: .9em; } .tl-bury .tl-dot { width: 22px; height: 22px; justify-self: center; }
