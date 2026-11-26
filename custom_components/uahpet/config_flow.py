@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
 
 
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import callback
-from homeassistant.helpers.storage import Store
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.selector import (
     BooleanSelector,
     MediaSelector,
@@ -30,7 +31,7 @@ from homeassistant.helpers.selector import (
 
 from .cats import DEFAULT_MIN_WEIGHT, DEFAULT_SMOOTHING, DEFAULT_TOLERANCE, UNIDENTIFIED
 from .client import ProbeError, probe
-from .pictures import PictureError, async_copy_picture, async_delete_pictures, async_store_picture, lci_picture_file
+from .pictures import PictureError, async_copy_picture, async_delete_pictures, async_store_picture
 from .const import (
     CONF_CAT_ALERT_HOURS,
     CONF_CAT_COLOR,
@@ -158,14 +159,19 @@ class UahpetConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_setup_import_lci(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         entries = {e.entry_id: e for e in self.hass.config_entries.async_entries(LCI)}
+        errors: dict[str, str] = {}
         if user_input is not None:
-            cats, settings, state = await _import_lci(self.hass, entries[user_input["lci_entry"]])
-            self.hass.data.setdefault(PENDING_CATS, {})[self._data[CONF_DEVICE_ID]] = state
-            return self.async_create_entry(title=self._title, data=self._data, options={**settings, CONF_CATS: cats})
+            try:
+                cats, settings, state = await _import_lci(self.hass, entries[user_input["lci_entry"]])
+            except LciUnavailable:
+                errors["base"] = "lci_unavailable"
+            else:
+                self.hass.data.setdefault(PENDING_CATS, {})[self._data[CONF_DEVICE_ID]] = state
+                return self.async_create_entry(title=self._title, data=self._data, options={**settings, CONF_CATS: cats})
         options = [{"value": e.entry_id, "label": e.title} for e in entries.values()]
         schema = vol.Schema({vol.Required("lci_entry", default=options[0]["value"]): SelectSelector(
             SelectSelectorConfig(options=options, mode=SelectSelectorMode.LIST))})
-        return self.async_show_form(step_id="setup_import_lci", data_schema=schema)
+        return self.async_show_form(step_id="setup_import_lci", data_schema=schema, errors=errors)
 
     async def async_step_setup_done(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self.async_create_entry(title=self._title, data=self._data)
@@ -207,25 +213,36 @@ async def _resolve_picture(hass, user_input: dict[str, Any], current: str | None
     return typed or current
 
 
+LCI_EXPORT = "export_data"  # Litter Cat Identifier >= 0.9.4: its public export, format version 1
+
+
+class LciUnavailable(Exception):
+    """Litter Cat Identifier is too old, disabled, or could not export."""
+
+
 async def _import_lci(hass, lci) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
-    """Cats, settings and state of a Litter Cat Identifier entry, in UAHPET's format."""
-    if lci.state is ConfigEntryState.LOADED:
-        data = lci.runtime_data._as_dict()  # freshest values
-    else:
-        data = await Store(hass, 1, f"{LCI}.{lci.entry_id}").async_load() or {}
-    opts, cat_opts = lci.options, lci.options.get("cat_options", {})
-    learned = data.get("learned", {})
+    """Cats, settings and state of a Litter Cat Identifier entry, in UAHPET's format (through its export action)."""
+    if not hass.services.has_service(LCI, LCI_EXPORT):
+        raise LciUnavailable
+    try:
+        data = await hass.services.async_call(
+            LCI, LCI_EXPORT, {"config_entry_id": lci.entry_id}, blocking=True, return_response=True
+        )
+    except HomeAssistantError as err:
+        raise LciUnavailable from err
+    if not data or data.get("version") != 1:
+        raise LciUnavailable
     cats = []
-    for c in lci.data.get("cats", []):
-        name, o = c["name"], cat_opts.get(c["name"], {})
-        picture = o.get("picture")
-        if src := lci_picture_file(hass, picture):  # copy it: it must survive removing Litter Cat Identifier
-            picture = await async_copy_picture(hass, src)
+    for c in data.get("cats", []):
+        picture = c.get("picture")
+        if c.get("picture_file"):  # copy it: it must survive removing Litter Cat Identifier
+            picture = await async_copy_picture(hass, Path(c["picture_file"]))
         cats.append({
-            CONF_CAT_NAME: name, CONF_CAT_WEIGHT: round(float(learned.get(name, c["weight"])), 3),
-            CONF_CAT_PICTURE: picture, CONF_CAT_COLOR: o.get("color"),
-            CONF_CAT_NOTIFY_VISIT: bool(o.get("notify_visit", False)), CONF_CAT_ALERT_HOURS: float(o.get("alert_hours", 0) or 0),
+            CONF_CAT_NAME: c["name"], CONF_CAT_WEIGHT: round(float(c["weight"]), 3),
+            CONF_CAT_PICTURE: picture, CONF_CAT_COLOR: c.get("color"),
+            CONF_CAT_NOTIFY_VISIT: bool(c.get("notify_visit", False)), CONF_CAT_ALERT_HOURS: float(c.get("alert_hours", 0) or 0),
         })
+    opts = data.get("settings", {})
     settings = {
         CONF_TOLERANCE: opts.get("tolerance", DEFAULT_TOLERANCE), CONF_SMOOTHING: opts.get("smoothing", DEFAULT_SMOOTHING),
         CONF_MIN_WEIGHT: opts.get("min_weight", DEFAULT_MIN_WEIGHT), CONF_NOTIFY_TARGETS: list(opts.get("notify_targets", [])),
@@ -233,11 +250,12 @@ async def _import_lci(hass, lci) -> tuple[list[dict[str, Any]], dict[str, Any], 
         CONF_RECORD_UNIDENTIFIED: bool(opts.get("record_unidentified", True)),
     }
     weights = {c[CONF_CAT_NAME]: c[CONF_CAT_WEIGHT] for c in cats}
+    st = data.get("state", {})
     state = {
-        "learned": weights, "initial": weights, "visits_today": data.get("visits_today", {}),
-        "last_visit": data.get("last_visit", {}), "history": data.get("history", []), "day": data.get("day", ""),
-        "daily": data.get("daily", {}), "weights": data.get("weights", {}), "health": data.get("health", {}),
-        "alerted": data.get("alerted", {}),
+        "learned": weights, "initial": weights, "visits_today": st.get("visits_today", {}),
+        "last_visit": st.get("last_visit", {}), "history": st.get("history", []), "day": st.get("day", ""),
+        "daily": st.get("daily", {}), "weights": st.get("weights", {}), "health": st.get("health", {}),
+        "alerted": st.get("alerted", {}),
     }
     return cats, settings, state
 
@@ -370,16 +388,21 @@ class UahpetOptionsFlow(OptionsFlow):
 
     async def async_step_import_lci(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         entries = {e.entry_id: e for e in self._lci_entries()}
+        errors: dict[str, str] = {}
         if user_input is not None:
-            cats, settings, state = await _import_lci(self.hass, entries[user_input["lci_entry"]])
-            new_options = {**self.config_entry.options, **settings, CONF_CATS: cats}
-            # Replace the running state first: the reload that follows saves it before starting again.
-            coordinator = self.config_entry.runtime_data
-            coordinator.cats = coordinator._cats_from_options(new_options)
-            coordinator.cats.load(state)
-            await coordinator.async_flush()
-            return self.async_create_entry(data=new_options)
+            try:
+                cats, settings, state = await _import_lci(self.hass, entries[user_input["lci_entry"]])
+            except LciUnavailable:
+                errors["base"] = "lci_unavailable"
+            else:
+                new_options = {**self.config_entry.options, **settings, CONF_CATS: cats}
+                # Replace the running state first: the reload that follows saves it before starting again.
+                coordinator = self.config_entry.runtime_data
+                coordinator.cats = coordinator._cats_from_options(new_options)
+                coordinator.cats.load(state)
+                await coordinator.async_flush()
+                return self.async_create_entry(data=new_options)
         options = [{"value": e.entry_id, "label": e.title} for e in entries.values()]
         schema = vol.Schema({vol.Required("lci_entry", default=options[0]["value"]): SelectSelector(
             SelectSelectorConfig(options=options, mode=SelectSelectorMode.LIST))})
-        return self.async_show_form(step_id="import_lci", data_schema=schema)
+        return self.async_show_form(step_id="import_lci", data_schema=schema, errors=errors)

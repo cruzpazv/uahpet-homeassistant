@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.8.2";
+const VERSION = "0.8.3";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };

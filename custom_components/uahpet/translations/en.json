@@ -65,7 +65,8 @@
       "unknown": "Unexpected error, see the logs.",
       "wrong_device": "That ID answers as a different kind of UAHPET device.",
       "invalid_name": "Name cannot be empty.",
-      "duplicate_name": "That name is already used."
+      "duplicate_name": "That name is already used.",
+      "lci_unavailable": "Litter Cat Identifier could not export this litter box: update it to 0.9.4 or later and make sure it is enabled."
     },
     "abort": {
       "already_configured": "This device is already configured.",
@@ -408,7 +409,8 @@
       "invalid_name": "Name cannot be empty.",
       "duplicate_name": "That name is already used.",
       "invalid_image": "That file isn't an image Home Assistant can read.",
-      "not_local": "That media source can't be used; pick or upload the photo in Image upload or My media."
+      "not_local": "That media source can't be used; pick or upload the photo in Image upload or My media.",
+      "lci_unavailable": "Litter Cat Identifier could not export this litter box: update it to 0.9.4 or later and make sure it is enabled."
     }
   },
   "services": {

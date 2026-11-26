@@ -1,9 +1,8 @@
 """Corrections, health, notifications, services and the import from Litter Cat Identifier."""
 
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, async_mock_service
@@ -100,30 +99,45 @@ async def test_entities_services_and_notifications(hass: HomeAssistant, fake_cli
     assert entry
 
 
-async def test_import_from_litter_cat_identifier(hass: HomeAssistant, fake_client, hass_storage, tmp_path, hass_client_no_auth) -> None:
-    # a Litter Cat Identifier entry (not loaded) with its stored state and a photo it serves
-    pics = Path(hass.config.path("litter_cat_identifier"))
-    pics.mkdir(parents=True, exist_ok=True)
-    (pics / "0123456789ab.jpg").write_bytes(b"jpeg")
-    lci = MockConfigEntry(
-        domain="litter_cat_identifier", title="Arenero",
-        data={"name": "Arenero", "weight_entity": "sensor.w", "cats": [{"name": "Luna", "weight": 3.8}, {"name": "Simba", "weight": 5.5}]},
-        options={"tolerance": 0.8, "notify_targets": ["notify.phone"], "notify_health": False,
-                 "cat_options": {"Luna": {"picture": "/api/litter_cat_identifier/picture/0123456789ab.jpg", "color": [225, 87, 89], "notify_visit": True, "alert_hours": 12}}},
-    )
+async def test_import_from_litter_cat_identifier(hass: HomeAssistant, fake_client, tmp_path, hass_client_no_auth) -> None:
+    # a Litter Cat Identifier entry, exported through its public action (format version 1)
+    photo = tmp_path / "0123456789ab.jpg"
+    photo.write_bytes(b"jpeg")
+    lci = MockConfigEntry(domain="litter_cat_identifier", title="Arenero", data={})
     lci.add_to_hass(hass)
     hist = [{"time": "2026-11-18T09:00:00+00:00", "cat": "Simba", "weight": 5.6, "duration": 40},
             {"time": "2026-11-18T08:00:00+00:00", "cat": "Luna", "weight": 3.9, "duration": 30}]
-    hass_storage[f"litter_cat_identifier.{lci.entry_id}"] = {"version": 1, "key": "x", "data": {
-        "learned": {"Luna": 3.91, "Simba": 5.62}, "history": hist, "last_visit": {"Luna": hist[1]["time"], "Simba": hist[0]["time"]},
-        "visits_today": {"Luna": 1, "Simba": 1}, "day": dt_util.now().date().isoformat()}}
+    export = {
+        "version": 1, "name": "Arenero",
+        "cats": [
+            {"name": "Luna", "weight": 3.91, "initial_weight": 3.8, "picture": None, "picture_file": str(photo),
+             "color": [225, 87, 89], "notify_visit": True, "alert_hours": 12},
+            {"name": "Simba", "weight": 5.62, "initial_weight": 5.5, "picture": None, "picture_file": None,
+             "color": None, "notify_visit": False, "alert_hours": 0},
+        ],
+        "settings": {"tolerance": 0.8, "smoothing": 0.2, "min_weight": 1.0, "notify_targets": ["notify.phone"],
+                     "notify_unidentified": False, "notify_health": False, "record_unidentified": True},
+        "state": {"history": hist, "last_visit": {"Luna": hist[1]["time"], "Simba": hist[0]["time"]},
+                  "visits_today": {"Luna": 1, "Simba": 1}, "day": dt_util.now().date().isoformat(),
+                  "alerted": {}, "daily": {}, "weights": {}, "health": {}},
+    }
+    calls = []
+
+    async def _export(call):
+        calls.append(call.data)
+        return export
 
     entry = await _setup(hass)
     r = await hass.config_entries.options.async_init(entry.entry_id)
     assert "import_lci" in r["menu_options"]
     r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "import_lci"})
+    # Litter Cat Identifier too old (no export action): explained, nothing changes
+    r = await hass.config_entries.options.async_configure(r["flow_id"], {"lci_entry": lci.entry_id})
+    assert r["type"] == "form" and r["errors"] == {"base": "lci_unavailable"}
+    hass.services.async_register("litter_cat_identifier", "export_data", _export, supports_response=SupportsResponse.ONLY)
     r = await hass.config_entries.options.async_configure(r["flow_id"], {"lci_entry": lci.entry_id})
     await hass.async_block_till_done()
+    assert calls == [{"config_entry_id": lci.entry_id}]
 
     cats = {c["name"]: c for c in entry.options["cats"]}
     assert cats["Luna"]["weight"] == 3.91 and cats["Luna"]["alert_hours"] == 12 and cats["Luna"]["color"] == [225, 87, 89]

@@ -142,11 +142,3 @@ async def async_copy_picture(hass: HomeAssistant, src: Path) -> str | None:
     await hass.async_add_executor_job(shutil.copyfile, src, picture_dir(hass) / name)
     return f"{URL_PREFIX}/{name}"
 
-
-def lci_picture_file(hass: HomeAssistant, url: str | None) -> Path | None:
-    """The file behind a Litter Cat Identifier photo URL (any version), to copy it."""
-    for prefix in ("/api/litter_cat_identifier/picture/", "/litter_cat_identifier_pictures/"):
-        if url and url.startswith(prefix):
-            name = url[len(prefix):].split("?", 1)[0]
-            return Path(hass.config.path("litter_cat_identifier")) / name if _NAME.match(name) else None
-    return None

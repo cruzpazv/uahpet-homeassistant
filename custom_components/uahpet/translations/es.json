@@ -65,7 +65,8 @@
       "unknown": "Error inesperado, revisa el registro.",
       "wrong_device": "Ese ID responde como otro tipo de aparato UAHPET.",
       "invalid_name": "El nombre no puede estar vacío.",
-      "duplicate_name": "Ese nombre ya está en uso."
+      "duplicate_name": "Ese nombre ya está en uso.",
+      "lci_unavailable": "Litter Cat Identifier no ha podido exportar este arenero: actualízalo a la 0.9.4 o posterior y comprueba que está activado."
     },
     "abort": {
       "already_configured": "Este aparato ya está configurado.",
@@ -408,7 +409,8 @@
       "invalid_name": "El nombre no puede estar vacío.",
       "duplicate_name": "Ese nombre ya está en uso.",
       "invalid_image": "Ese archivo no es una imagen que Home Assistant pueda leer.",
-      "not_local": "Ese origen multimedia no se puede usar; elige o sube la foto en Subida de imágenes o Mis medios."
+      "not_local": "Ese origen multimedia no se puede usar; elige o sube la foto en Subida de imágenes o Mis medios.",
+      "lci_unavailable": "Litter Cat Identifier no ha podido exportar este arenero: actualízalo a la 0.9.4 o posterior y comprueba que está activado."
     }
   },
   "services": {
