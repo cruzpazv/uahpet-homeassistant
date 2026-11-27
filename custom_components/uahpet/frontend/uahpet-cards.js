@@ -3,7 +3,7 @@
 const DOMAIN = "uahpet";
 const TUYA_PLATFORMS = ["tuya", "xtend_tuya"];
 const PURIFIER_PLATFORMS = [DOMAIN, ...TUYA_PLATFORMS]; // DOMAIN: future local purifier profiles
-const VERSION = "0.8.3";
+const VERSION = "0.8.4";
 const DOCS = "https://github.com/cruzpazv/uahpet-homeassistant";
 // per-cat entities (attribute `cat`): UAHPET cat profiles use cat_learned_weight, Litter Cat Identifier cat_weight
 const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_visits_today: "visits", cat_last_visit: "last", cat_health: "health" };
@@ -13,7 +13,7 @@ const CAT_FIELDS = { cat_learned_weight: "weight", cat_weight: "weight", cat_vis
 const I18N = {
   en: {
     clean: "Clean", level: "Level", empty: "Empty", cancel: "Cancel", confirm_btn: "Continue",
-    ev_burying: "Waste buried", st_burying: "Burying the waste", ed_show_burying: "Show burying", ed_scale: "Size",
+    ev_burying: "Waste buried", st_burying: "Burying the waste", ed_show_burying: "Show burying", ed_show_seconds: "Show seconds", ed_scale: "Size",
     add_cat: "Add a cat", manage_cats: "Manage cats", f_name: "Name", f_weight: "Approximate weight (kg)", f_color: "Colour", add_btn: "Add",
     add_hint: "Photo, notifications and more in Manage cats.", adding: "Adding…",
     speed_cloud: "Speeds 1–3 aren't available through the Tuya cloud for this purifier (it only declares one). Add the purifier to UAHPET to control them locally.",
@@ -111,7 +111,7 @@ const I18N = {
   },
   es: {
     clean: "Limpiar", level: "Nivelar", empty: "Vaciar", cancel: "Cancelar", confirm_btn: "Continuar",
-    ev_burying: "Excrementos enterrados", st_burying: "Enterrando los excrementos", ed_show_burying: "Mostrar enterrados", ed_scale: "Tamaño",
+    ev_burying: "Excrementos enterrados", st_burying: "Enterrando los excrementos", ed_show_burying: "Mostrar enterrados", ed_show_seconds: "Mostrar segundos", ed_scale: "Tamaño",
     add_cat: "Añadir un gato", manage_cats: "Gestionar gatos", f_name: "Nombre", f_weight: "Peso aproximado (kg)", f_color: "Color", add_btn: "Añadir",
     add_hint: "Foto, avisos y más en Gestionar gatos.", adding: "Añadiendo…",
     speed_cloud: "Las velocidades 1–3 no están disponibles por la nube de Tuya en este purificador (solo declara una). Añádelo a UAHPET para controlarlas en local.",
@@ -217,7 +217,8 @@ const num = (s) => (known(s) && !isNaN(parseFloat(s.state)) ? parseFloat(s.state
 /* ---------- time ---------- */
 
 const locale = (hass) => hass?.locale?.language || lang(hass);
-const fmtClock = (hass, d) => new Intl.DateTimeFormat(locale(hass), { hour: "2-digit", minute: "2-digit" }).format(d);
+const fmtClock = (hass, d, seconds = false) =>
+  new Intl.DateTimeFormat(locale(hass), { hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}) }).format(d);
 const fmtDur = (s) => {
   s = Math.max(0, Math.round(Number(s) || 0));
   return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ""}`;
@@ -877,7 +878,7 @@ class UahpetLitterboxTimelineCard extends LitterCard {
         text = e.cat ? t(h, "visit_cat", { cat: e.cat, d: dur }) : t(h, "visit_anon", { d: dur });
       }
       const extra = e.kind === "visit" && e.weight ? `<span class="tl-w">${esc(fmtNum(h, e.weight))} kg</span>` : "";
-      return `${sep}<li class="tl-${e.kind}"><span class="tl-time">${esc(fmtClock(h, d))}</span>
+      return `${sep}<li class="tl-${e.kind}"><span class="tl-time">${esc(fmtClock(h, d, !!c.show_seconds))}</span>
         <span class="tl-dot"${e.color ? ` style="--cat:${esc(e.color)}"` : ""}><ha-icon icon="${e.icon}"></ha-icon></span><span class="tl-text">${esc(text)}</span>${extra}</li>`;
     }).join("");
     return `${head}${summary ? `<div class="sub summary">${esc(summary)}</div>` : ""}
@@ -1352,7 +1353,8 @@ class UahpetVisitsCard extends CatCardBase {
     const rows = shown.map((v) => {
       const d = new Date(v.time);
       const today = d.toDateString() === new Date().toDateString();
-      const when = today ? fmtClock(h, d) : `${new Intl.DateTimeFormat(locale(h), { day: "numeric", month: "short" }).format(d)} ${fmtClock(h, d)}`;
+      const clock = fmtClock(h, d, !!c.show_seconds);
+      const when = today ? clock : `${new Intl.DateTimeFormat(locale(h), { day: "numeric", month: "short" }).format(d)} ${clock}`;
       let cat = esc(v.cat);
       if (v.cat === "unidentified") {
         const why = v.reason ? t(h, `r_${v.reason}`, { cat: v.likely_cat || "?" }) : "";
@@ -2119,7 +2121,7 @@ define("uahpet-litterbox-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FI
 define("uahpet-litterbox-timeline-card", UahpetLitterboxTimelineCard);
 define("uahpet-litterbox-timeline-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD,
   choice(h, "range", ["today", "24h"], (v) => (v === "today" ? "timeline" : "last24")),
-  { name: "max_items", selector: { number: { min: 5, max: 50, mode: "box" } } }, bool("show_cleanings"), bool("show_burying"), bool("show_alerts")], D(UahpetLitterboxTimelineCard)));
+  { name: "max_items", selector: { number: { min: 5, max: 50, mode: "box" } } }, bool("show_cleanings"), bool("show_burying"), bool("show_alerts"), bool("show_seconds")], D(UahpetLitterboxTimelineCard)));
 define("uahpet-litterbox-stats-card", UahpetLitterboxStatsCard);
 define("uahpet-litterbox-stats-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD,
   choice(h, "days", [7, 30]), choice(h, "metric", Object.keys(METRICS), (v) => `m_${v}`)], D(UahpetLitterboxStatsCard)));
@@ -2144,7 +2146,7 @@ define("uahpet-visits-card", UahpetVisitsCard);
 define("uahpet-visits-card-editor", makeEditor(() => [DEVICE_FIELD, TITLE_FIELD,
   { name: "count", selector: { number: { min: 1, max: 50, mode: "box" } } }, bool("collapsible"),
   { name: "expanded_count", selector: { number: { min: 5, max: 500, mode: "box" } } },
-  bool("show_weight"), bool("show_duration"), bool("show_unidentified"), bool("show_toggle")], D(UahpetVisitsCard)));
+  bool("show_weight"), bool("show_duration"), bool("show_unidentified"), bool("show_toggle"), bool("show_seconds")], D(UahpetVisitsCard)));
 define("uahpet-visits-chart-card", UahpetVisitsChartCard);
 define("uahpet-visits-chart-card-editor", makeEditor((h) => [DEVICE_FIELD, TITLE_FIELD, choice(h, "days", [7, 30]), bool("show_unidentified")], D(UahpetVisitsChartCard)));
 define("uahpet-weight-chart-card", UahpetWeightChartCard);
